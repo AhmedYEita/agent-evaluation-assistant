@@ -1,0 +1,22 @@
+# Custom evaluation configuration
+project_id: "your-project-id"
+agent_name: "customer-support-agent"
+
+logging:
+  level: "INFO"
+  include_trajectories: true
+  include_metadata: true
+
+tracing:
+  enabled: true
+  sample_rate: 1.0  # Trace 100% of requests
+
+metrics:
+  enabled: true
+  custom_metrics: []
+
+dataset:
+  auto_collect: true
+  sample_rate: 0.2  # Collect 20% of interactions
+  storage_location: null  # Use default (auto-created BigQuery table)
+
