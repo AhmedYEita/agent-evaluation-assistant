@@ -55,5 +55,5 @@ jobs:
       run: |
         cd sdk
         mypy agent_evaluation_sdk/
-      continue-on-error: true  # Don't fail on type errors initially
+      continue-on-error: false  # Fail on type errors
 

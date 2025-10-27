@@ -121,14 +121,8 @@ class CloudTracer:
 
         # Send to Cloud Trace (batch for efficiency in production)
         try:
-            self.client.create_span(
-                name=span.name,
-                span_id=span.span_id,
-                display_name=span.display_name,
-                start_time=span.start_time,
-                end_time=span.end_time,
-                attributes=span.attributes,
-            )
+            # The create_span method expects (name, span) parameters
+            self.client.create_span(name=span.name, span=span)  # type: ignore[call-arg]
         except Exception as e:
             # Don't fail the agent if tracing fails
             print(f"Warning: Failed to create span: {e}")
