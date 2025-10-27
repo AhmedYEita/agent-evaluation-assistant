@@ -12,7 +12,7 @@ Before you begin, ensure you have:
 - [ ] Tools installed:
   - `gcloud` CLI
   - `terraform` (>= 1.5.0)
-  - `python` (>= 3.10)
+  - `python` (>= 3.12)
   - `git`
 
 ## 🚀 Deployment Steps

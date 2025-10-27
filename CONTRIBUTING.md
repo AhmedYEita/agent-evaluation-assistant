@@ -6,7 +6,7 @@ Thank you for your interest in contributing! This document provides guidelines a
 
 ### Prerequisites
 
-- Python 3.10+
+- Python 3.12+
 - Terraform 1.5+
 - GCP account (for testing)
 - Git

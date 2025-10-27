@@ -559,7 +559,7 @@ def open_dashboard(args):
 [project]
 name = "agent-evaluation-sdk"
 version = "0.1.0"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 
 dependencies = [
     "google-cloud-logging>=3.10.0",
@@ -613,9 +613,7 @@ on:
 
 jobs:
   test:
-    strategy:
-      matrix:
-        python-version: ['3.10', '3.11', '3.12']
+    runs-on: ubuntu-latest
     
     steps:
       - Install dependencies
@@ -626,7 +624,7 @@ jobs:
 ```
 
 **What it does**:
-- Runs unit tests across 3 Python versions
+- Runs unit tests on Python 3.12
 - Checks code coverage
 - Validates code style
 - Type checking

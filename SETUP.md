@@ -15,15 +15,15 @@ Complete guide to setting up your development environment and deploying the agen
 
 ### Install Required Tools
 
-#### 1. Python 3.10+
+#### 1. Python 3.12+
 
 ```bash
 # macOS
-brew install python@3.11
+brew install python@3.12
 
 # Ubuntu/Debian
 sudo apt update
-sudo apt install python3.11 python3.11-venv python3-pip
+sudo apt install python3.12 python3.12-venv python3-pip
 
 # Windows
 # Download from https://www.python.org/downloads/

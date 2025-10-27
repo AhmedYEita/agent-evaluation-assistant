@@ -8,7 +8,7 @@ Ensure you have:
 - ✅ GCP account with billing enabled
 - ✅ `gcloud` CLI installed: `gcloud --version`
 - ✅ Terraform installed: `terraform --version`
-- ✅ Python 3.10+: `python --version`
+- ✅ Python 3.12+: `python --version`
 
 ```bash
 # Authenticate with GCP
