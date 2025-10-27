@@ -68,10 +68,10 @@ class EvaluationWrapper:
     def _wrap_agent(self) -> None:
         """Wrap agent methods with evaluation instrumentation."""
         # Store original method
-        if hasattr(self.agent, 'generate_content'):
+        if hasattr(self.agent, "generate_content"):
             original_method = self.agent.generate_content
             self.agent.generate_content = self._wrap_generate_content(original_method)
-        elif hasattr(self.agent, '__call__'):
+        elif hasattr(self.agent, "__call__"):
             original_method = self.agent.__call__
             self.agent.__call__ = self._wrap_generate_content(original_method)
         else:
@@ -86,6 +86,7 @@ class EvaluationWrapper:
         Returns:
             Wrapped method with evaluation instrumentation
         """
+
         @functools.wraps(original_method)
         def wrapped(*args, **kwargs):
             # Generate interaction ID
@@ -95,7 +96,7 @@ class EvaluationWrapper:
             trace_id = self.tracer.start_trace()
 
             # Extract input
-            input_data = args[0] if args else kwargs.get('prompt', kwargs.get('input', ''))
+            input_data = args[0] if args else kwargs.get("prompt", kwargs.get("input", ""))
 
             try:
                 # Execute with tracing
@@ -131,10 +132,10 @@ class EvaluationWrapper:
                     self.metrics.record_success()
 
                     # Extract and record token counts if available
-                    if metadata.get('input_tokens') and metadata.get('output_tokens'):
+                    if metadata.get("input_tokens") and metadata.get("output_tokens"):
                         self.metrics.record_token_count(
-                            input_tokens=metadata['input_tokens'],
-                            output_tokens=metadata['output_tokens'],
+                            input_tokens=metadata["input_tokens"],
+                            output_tokens=metadata["output_tokens"],
                         )
 
                     # Collect for dataset
@@ -158,7 +159,7 @@ class EvaluationWrapper:
                     context={
                         "input": str(input_data)[:500],  # Truncate for logging
                         "duration_ms": duration_ms,
-                    }
+                    },
                 )
 
                 # Record error metric
@@ -183,19 +184,18 @@ class EvaluationWrapper:
         # Handle different response types
         if isinstance(response, str):
             return response
-        elif hasattr(response, 'text'):
+        elif hasattr(response, "text"):
             return response.text
-        elif hasattr(response, 'content'):
+        elif hasattr(response, "content"):
             return response.content
-        elif hasattr(response, 'candidates'):
+        elif hasattr(response, "candidates"):
             # ADK/Gemini response format
             if response.candidates:
                 candidate = response.candidates[0]
-                if hasattr(candidate, 'content'):
-                    if hasattr(candidate.content, 'parts'):
-                        return ' '.join(
-                            part.text for part in candidate.content.parts
-                            if hasattr(part, 'text')
+                if hasattr(candidate, "content"):
+                    if hasattr(candidate.content, "parts"):
+                        return " ".join(
+                            part.text for part in candidate.content.parts if hasattr(part, "text")
                         )
 
         # Fallback: return string representation
@@ -213,32 +213,32 @@ class EvaluationWrapper:
         metadata = {}
 
         # Try to extract token usage
-        if hasattr(response, 'usage_metadata'):
+        if hasattr(response, "usage_metadata"):
             usage = response.usage_metadata
-            if hasattr(usage, 'prompt_token_count'):
-                metadata['input_tokens'] = usage.prompt_token_count
-            if hasattr(usage, 'candidates_token_count'):
-                metadata['output_tokens'] = usage.candidates_token_count
-            if hasattr(usage, 'total_token_count'):
-                metadata['total_tokens'] = usage.total_token_count
+            if hasattr(usage, "prompt_token_count"):
+                metadata["input_tokens"] = usage.prompt_token_count
+            if hasattr(usage, "candidates_token_count"):
+                metadata["output_tokens"] = usage.candidates_token_count
+            if hasattr(usage, "total_token_count"):
+                metadata["total_tokens"] = usage.total_token_count
 
         # Try to extract model info
-        if hasattr(response, 'model'):
-            metadata['model'] = response.model
+        if hasattr(response, "model"):
+            metadata["model"] = response.model
 
         # Try to extract safety ratings
-        if hasattr(response, 'candidates'):
-            if response.candidates and hasattr(response.candidates[0], 'safety_ratings'):
-                metadata['safety_ratings'] = [
+        if hasattr(response, "candidates"):
+            if response.candidates and hasattr(response.candidates[0], "safety_ratings"):
+                metadata["safety_ratings"] = [
                     {
-                        'category': (
+                        "category": (
                             rating.category.name
-                            if hasattr(rating.category, 'name')
+                            if hasattr(rating.category, "name")
                             else str(rating.category)
                         ),
-                        'probability': (
+                        "probability": (
                             rating.probability.name
-                            if hasattr(rating.probability, 'name')
+                            if hasattr(rating.probability, "name")
                             else str(rating.probability)
                         ),
                     }
@@ -311,4 +311,3 @@ def enable_evaluation(
     wrapper = EvaluationWrapper(agent=agent, config=config)
 
     return wrapper
-

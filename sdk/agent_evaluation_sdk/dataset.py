@@ -196,4 +196,3 @@ class DatasetCollector:
         if isinstance(data, str):
             return data
         return json.dumps(data, default=str)
-

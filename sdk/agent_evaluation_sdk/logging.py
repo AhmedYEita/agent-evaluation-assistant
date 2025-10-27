@@ -34,7 +34,7 @@ class CloudLogger:
             labels={
                 "project_id": project_id,
                 "agent_name": agent_name,
-            }
+            },
         )
 
     def log_interaction(
@@ -144,4 +144,3 @@ class CloudLogger:
         else:
             # For complex objects, convert to string
             return str(data)
-

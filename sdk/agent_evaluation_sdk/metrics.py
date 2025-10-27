@@ -45,10 +45,7 @@ class CloudMetrics:
         )
 
     def record_token_count(
-        self,
-        input_tokens: int,
-        output_tokens: int,
-        labels: Optional[Dict[str, str]] = None
+        self, input_tokens: int, output_tokens: int, labels: Optional[Dict[str, str]] = None
     ) -> None:
         """Record token usage for the interaction.
 
@@ -161,28 +158,24 @@ class CloudMetrics:
         seconds = int(now)
         nanos = int((now - seconds) * 10**9)
 
-        interval = monitoring_v3.TimeInterval(
-            {"end_time": {"seconds": seconds, "nanos": nanos}}
-        )
+        interval = monitoring_v3.TimeInterval({"end_time": {"seconds": seconds, "nanos": nanos}})
 
-        point = monitoring_v3.Point({
-            "interval": interval,
-            "value": (
-                {"double_value": float(value)}
-                if value_type == ga_metric.MetricDescriptor.ValueType.DOUBLE
-                else {"int64_value": int(value)}
-            )
-        })
+        point = monitoring_v3.Point(
+            {
+                "interval": interval,
+                "value": (
+                    {"double_value": float(value)}
+                    if value_type == ga_metric.MetricDescriptor.ValueType.DOUBLE
+                    else {"int64_value": int(value)}
+                ),
+            }
+        )
 
         series.points = [point]
 
         # Write time series
         try:
-            self.client.create_time_series(
-                name=self.project_name,
-                time_series=[series]
-            )
+            self.client.create_time_series(name=self.project_name, time_series=[series])
         except Exception as e:
             # Don't fail the agent if metrics fail
             print(f"Warning: Failed to write metric: {e}")
-

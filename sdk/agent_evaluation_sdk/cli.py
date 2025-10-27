@@ -30,7 +30,9 @@ def view_logs(args):
     filter_expr = f'resource.labels.agent_name="{args.agent_name}"'
 
     cmd = [
-        "gcloud", "logging", "read",
+        "gcloud",
+        "logging",
+        "read",
         filter_expr,
         f"--project={args.project_id}",
         f"--limit={args.limit}",
@@ -45,7 +47,10 @@ def view_dashboard(args):
     import subprocess
 
     cmd = [
-        "gcloud", "monitoring", "dashboards", "list",
+        "gcloud",
+        "monitoring",
+        "dashboards",
+        "list",
         f'--filter=displayName:"{args.agent_name}"',
         f"--project={args.project_id}",
     ]
@@ -64,8 +69,7 @@ def main():
 
     # Export dataset command
     export_parser = subparsers.add_parser(
-        "export-dataset",
-        help="Export collected interactions to JSON file"
+        "export-dataset", help="Export collected interactions to JSON file"
     )
     export_parser.add_argument("--project-id", required=True, help="GCP project ID")
     export_parser.add_argument("--agent-name", required=True, help="Agent name")
@@ -76,20 +80,14 @@ def main():
     export_parser.set_defaults(func=export_dataset)
 
     # View logs command
-    logs_parser = subparsers.add_parser(
-        "logs",
-        help="View recent logs for an agent"
-    )
+    logs_parser = subparsers.add_parser("logs", help="View recent logs for an agent")
     logs_parser.add_argument("--project-id", required=True, help="GCP project ID")
     logs_parser.add_argument("--agent-name", required=True, help="Agent name")
     logs_parser.add_argument("--limit", type=int, default=50, help="Number of log entries")
     logs_parser.set_defaults(func=view_logs)
 
     # View dashboard command
-    dashboard_parser = subparsers.add_parser(
-        "dashboard",
-        help="List dashboards for an agent"
-    )
+    dashboard_parser = subparsers.add_parser("dashboard", help="List dashboards for an agent")
     dashboard_parser.add_argument("--project-id", required=True, help="GCP project ID")
     dashboard_parser.add_argument("--agent-name", required=True, help="Agent name")
     dashboard_parser.set_defaults(func=view_dashboard)
@@ -106,4 +104,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

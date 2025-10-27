@@ -115,10 +115,7 @@ class CloudTracer:
             start_time=start_timestamp,
             end_time=end_timestamp,
             attributes=Span.Attributes(
-                attribute_map={
-                    k: self._convert_attribute(v)
-                    for k, v in attributes.items()
-                }
+                attribute_map={k: self._convert_attribute(v) for k, v in attributes.items()}
             ),
         )
 
@@ -156,4 +153,3 @@ class CloudTracer:
     def _generate_span_id(self) -> str:
         """Generate a unique span ID."""
         return str(int(time.time() * 1000000))[-16:]  # 16-digit span ID
-

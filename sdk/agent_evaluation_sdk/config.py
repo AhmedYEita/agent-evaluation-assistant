@@ -76,4 +76,3 @@ class EvaluationConfig:
             project_id=project_id,
             agent_name=agent_name,
         )
-
