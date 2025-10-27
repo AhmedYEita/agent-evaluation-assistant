@@ -1,82 +1,44 @@
-name: Deploy to GCP Sandbox
+name: Validate Infrastructure
+
+# This workflow validates infrastructure without deploying
+# Manual deployment is done via terraform commands locally
 
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:  # Allow manual trigger
-
-env:
-  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  GCP_REGION: us-central1
+    paths:
+      - 'terraform/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'terraform/**'
 
 jobs:
-  deploy-infrastructure:
+  validate-infrastructure:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
     
     steps:
     - uses: actions/checkout@v4
-    
-    - name: Authenticate to Google Cloud
-      uses: google-github-actions/auth@v2
-      with:
-        workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
-        service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
-    
-    - name: Set up Cloud SDK
-      uses: google-github-actions/setup-gcloud@v2
     
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
       with:
         terraform_version: 1.5.0
     
+    - name: Terraform Format Check
+      run: |
+        cd terraform
+        terraform fmt -check -recursive
+    
     - name: Terraform Init
       run: |
         cd terraform
-        terraform init
+        terraform init -backend=false
     
-    - name: Terraform Plan
+    - name: Terraform Validate
       run: |
         cd terraform
-        terraform plan \
-          -var="project_id=${{ env.PROJECT_ID }}" \
-          -var="region=${{ env.GCP_REGION }}" \
-          -out=tfplan
-    
-    - name: Terraform Apply
-      run: |
-        cd terraform
-        terraform apply -auto-approve tfplan
-    
-    - name: Output Infrastructure Info
-      run: |
-        cd terraform
-        terraform output -json > ../infrastructure-outputs.json
-    
-    - name: Upload Outputs
-      uses: actions/upload-artifact@v4
-      with:
-        name: infrastructure-outputs
-        path: infrastructure-outputs.json
-
-  test-deployment:
-    needs: deploy-infrastructure
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Authenticate to Google Cloud
-      uses: google-github-actions/auth@v2
-      with:
-        workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
-        service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+        terraform validate
     
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -88,11 +50,10 @@ jobs:
         cd sdk
         pip install -e .
     
-    - name: Test Integration
+    - name: Validate SDK Import
       run: |
         python -c "
         from agent_evaluation_sdk import enable_evaluation
         print('✅ SDK import successful')
-        print('✅ Deployment validated')
+        print('✅ Infrastructure validation complete')
         "
-

@@ -18,7 +18,7 @@ gcloud auth application-default login
 
 4. Configure your project:
 ```bash
-export GCP_PROJECT_ID="your-project-id"
+export GCP_PROJECT_ID="dt-ahmedyasser-sandbox-dev"
 ```
 
 5. Run the agent:

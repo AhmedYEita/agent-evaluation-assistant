@@ -16,7 +16,7 @@ gcloud auth login
 gcloud auth application-default login
 
 # Set your project
-gcloud config set project YOUR_PROJECT_ID
+gcloud config set project dt-ahmedyasser-sandbox-dev
 ```
 
 ## Step 2: Deploy Infrastructure (3 minutes)
@@ -109,7 +109,7 @@ agent = Agent(
 # Add this ONE line - that's it!
 enable_evaluation(
     agent=agent,
-    project_id="your-project-id",
+    project_id="dt-ahmedyasser-sandbox-dev",
     agent_name="your-agent-name"
 )
 

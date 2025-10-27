@@ -199,13 +199,13 @@ def test_enable_evaluation():
     # Act
     wrapper = enable_evaluation(
         agent=mock_agent,
-        project_id="test-project",
+        project_id="dt-ahmedyasser-sandbox-dev",
         agent_name="test-agent"
     )
     
     # Assert
     assert wrapper is not None
-    assert wrapper.config.project_id == "test-project"
+    assert wrapper.config.project_id == "dt-ahmedyasser-sandbox-dev"
 ```
 
 ### Integration Tests

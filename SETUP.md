@@ -73,18 +73,15 @@ cd agent-evaluation-agent
 # List existing projects
 gcloud projects list
 
-# Create new project (optional)
-gcloud projects create your-project-id --name="Agent Evaluation"
-
-# Set active project
-gcloud config set project your-project-id
+# Set active project (project already created)
+gcloud config set project dt-ahmedyasser-sandbox-dev
 ```
 
 ### 2. Enable Billing
 
 ```bash
-# Link billing account (replace with your billing account ID)
-gcloud billing projects link your-project-id --billing-account=XXXXXX-XXXXXX-XXXXXX
+# Billing is already configured for dt-ahmedyasser-sandbox-dev
+# No action needed
 ```
 
 ### 3. Authenticate
@@ -114,16 +111,16 @@ gcloud services enable \
 # Get your user email
 USER_EMAIL=$(gcloud config get-value account)
 
-# Grant required roles
-gcloud projects add-iam-policy-binding your-project-id \
+# Grant required roles (if not already granted)
+gcloud projects add-iam-policy-binding dt-ahmedyasser-sandbox-dev \
   --member="user:$USER_EMAIL" \
   --role="roles/editor"
 
-gcloud projects add-iam-policy-binding your-project-id \
+gcloud projects add-iam-policy-binding dt-ahmedyasser-sandbox-dev \
   --member="user:$USER_EMAIL" \
   --role="roles/logging.admin"
 
-gcloud projects add-iam-policy-binding your-project-id \
+gcloud projects add-iam-policy-binding dt-ahmedyasser-sandbox-dev \
   --member="user:$USER_EMAIL" \
   --role="roles/monitoring.admin"
 ```
@@ -270,7 +267,7 @@ agent = Agent(
 
 enable_evaluation(
     agent=agent,
-    project_id="your-project-id",
+    project_id="dt-ahmedyasser-sandbox-dev",
     agent_name="your-agent-name"
 )
 ```

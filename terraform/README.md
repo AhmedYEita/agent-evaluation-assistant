@@ -25,7 +25,7 @@ terraform init
 
 # 2. Create terraform.tfvars with your settings
 cat > terraform.tfvars <<EOF
-project_id = "your-gcp-project-id"
+project_id = "dt-ahmedyasser-sandbox-dev"
 region     = "us-central1"
 EOF
 
