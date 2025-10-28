@@ -1,25 +1,27 @@
 name: Validate Infrastructure
 
-# This workflow validates infrastructure without deploying
-# Manual deployment is done via terraform commands locally
-
 on:
   push:
     branches: [ main ]
     paths:
       - 'terraform/**'
+      - 'sdk/**'
+      - '.github/workflows/validate-infra.yml'
   pull_request:
     branches: [ main ]
     paths:
       - 'terraform/**'
+      - 'sdk/**'
 
 jobs:
   validate-infrastructure:
     runs-on: ubuntu-latest
+    name: Infrastructure & SDK Validation
     
     steps:
     - uses: actions/checkout@v4
     
+    # Terraform validation
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
       with:
@@ -40,7 +42,18 @@ jobs:
         cd terraform
         terraform validate
     
-    - name: Set up Python
+    - name: TFLint Setup
+      uses: terraform-linters/setup-tflint@v4
+    
+    - name: Run TFLint
+      run: |
+        cd terraform
+        tflint --init
+        tflint --recursive
+      continue-on-error: true  # Don't fail on TFLint warnings
+    
+    # SDK validation
+    - name: Set up Python 3.12
       uses: actions/setup-python@v5
       with:
         python-version: '3.12'
@@ -57,3 +70,4 @@ jobs:
         print('✅ SDK import successful')
         print('✅ Infrastructure validation complete')
         "
+

@@ -110,9 +110,8 @@ agent-evaluation-agent/
 │
 └── .github/                     # CI/CD workflows
     └── workflows/
-        ├── test-sdk.yml         # SDK testing
-        ├── terraform.yml        # Terraform validation
-        └── deploy.yml           # Infrastructure validation
+        ├── test-sdk.yml         # SDK testing & code quality
+        └── validate-infra.yml   # Infrastructure & SDK compatibility
 ```
 
 ---
@@ -598,16 +597,18 @@ Validates code quality and infrastructure without deploying anything automatical
 
 ### Workflows
 
-#### 1. `test-sdk.yml` - SDK Testing
+#### 1. `test-sdk.yml` - SDK Testing & Code Quality
 
 ```yaml
-name: Test SDK
+name: Test
 
 on:
   push:
+    branches: [ main ]
     paths:
       - 'sdk/**'
   pull_request:
+    branches: [ main ]
     paths:
       - 'sdk/**'
 
@@ -616,7 +617,8 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - Install dependencies
+      - Set up Python 3.12
+      - Install dependencies (pip install -e ".[dev]")
       - Run pytest with coverage
       - Lint with ruff
       - Format check with black
@@ -626,60 +628,48 @@ jobs:
 **What it does**:
 - Runs unit tests on Python 3.12
 - Checks code coverage
-- Validates code style
-- Type checking
+- Validates code style (ruff)
+- Validates formatting (black)
+- Type checking (mypy - fails on errors)
 
-**Triggers**: Push or PR affecting `/sdk` directory
+**Triggers**: Push or PR to `main` affecting `/sdk` directory
 
-#### 2. `terraform.yml` - Terraform Validation
-
-```yaml
-name: Validate Terraform
-
-on:
-  push:
-    paths:
-      - 'terraform/**'
-  pull_request:
-    paths:
-      - 'terraform/**'
-
-jobs:
-  terraform:
-    steps:
-      - Terraform format check
-      - Terraform init
-      - Terraform validate
-      - TFLint
-```
-
-**What it does**:
-- Validates Terraform syntax
-- Checks formatting
-- Runs linter
-
-**Does NOT**: Deploy anything (manual deployment only)
-
-#### 3. `deploy.yml` - Infrastructure Validation
+#### 2. `validate-infra.yml` - Infrastructure & SDK Compatibility
 
 ```yaml
 name: Validate Infrastructure
 
 on:
   push:
+    branches: [ main ]
     paths:
       - 'terraform/**'
+      - 'sdk/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'terraform/**'
+      - 'sdk/**'
 
 jobs:
   validate-infrastructure:
     steps:
-      - Terraform validation
-      - SDK import test
+      - Terraform format check
+      - Terraform init (no backend)
+      - Terraform validate
+      - TFLint (continue on warning)
+      - Set up Python 3.12
+      - Install SDK (pip install -e .)
+      - Validate SDK import
 ```
 
-**What it does**: Comprehensive validation of infrastructure + SDK
+**What it does**:
+- Validates Terraform syntax and formatting
+- Runs TFLint best practices checker (warnings don't fail)
+- Tests SDK can be installed and imported
+- Ensures infrastructure and SDK are compatible
 
-**Does NOT**: Deploy to GCP (requires manual `terraform apply`)
+**Does NOT**: Deploy anything (manual deployment only)
 
 ### Why Manual Deployment?
 
