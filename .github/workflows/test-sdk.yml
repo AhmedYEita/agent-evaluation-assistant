@@ -12,8 +12,9 @@ on:
       - 'sdk/**'
 
 jobs:
-  test:
+  test-sdk:
     runs-on: ubuntu-latest
+    name: Test SDK
     
     steps:
     - uses: actions/checkout@v4
