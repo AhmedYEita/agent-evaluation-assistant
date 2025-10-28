@@ -132,30 +132,30 @@ resource "google_monitoring_dashboard" "agent_evaluation" {
 resource "google_monitoring_alert_policy" "high_error_rate" {
   display_name = "Agent Evaluation - High Error Rate"
   combiner     = "OR"
-  
+
   conditions {
     display_name = "Error rate above 5%"
-    
+
     condition_threshold {
       filter          = "metric.type=\"custom.googleapis.com/agent/errors\" resource.type=\"global\""
       duration        = "300s"
       comparison      = "COMPARISON_GT"
       threshold_value = 0.05
-      
+
       aggregations {
         alignment_period   = "60s"
         per_series_aligner = "ALIGN_RATE"
       }
     }
   }
-  
+
   documentation {
     content   = "Agent error rate has exceeded 5%. Check Cloud Logging for details."
     mime_type = "text/markdown"
   }
-  
+
   notification_channels = []
-  
+
   alert_strategy {
     auto_close = "1800s"
   }
@@ -165,30 +165,30 @@ resource "google_monitoring_alert_policy" "high_error_rate" {
 resource "google_monitoring_alert_policy" "high_latency" {
   display_name = "Agent Evaluation - High Latency"
   combiner     = "OR"
-  
+
   conditions {
     display_name = "Latency above 5 seconds"
-    
+
     condition_threshold {
       filter          = "metric.type=\"custom.googleapis.com/agent/latency\" resource.type=\"global\""
       duration        = "300s"
       comparison      = "COMPARISON_GT"
-      threshold_value = 5000  # 5 seconds in milliseconds
-      
+      threshold_value = 5000 # 5 seconds in milliseconds
+
       aggregations {
         alignment_period   = "60s"
         per_series_aligner = "ALIGN_MEAN"
       }
     }
   }
-  
+
   documentation {
     content   = "Agent response latency has exceeded 5 seconds. Check Cloud Trace for performance bottlenecks."
     mime_type = "text/markdown"
   }
-  
+
   notification_channels = []
-  
+
   alert_strategy {
     auto_close = "1800s"
   }

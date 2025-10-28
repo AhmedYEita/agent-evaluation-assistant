@@ -5,10 +5,10 @@ resource "google_bigquery_dataset" "agent_evaluation" {
   friendly_name = "Agent Evaluation Data"
   description   = "Storage for agent interactions and evaluation datasets"
   location      = var.region
-  
+
   # Default table expiration (optional - can be overridden per table)
   default_table_expiration_ms = var.dataset_retention_days * 24 * 60 * 60 * 1000
-  
+
   labels = {
     purpose = "agent-evaluation"
   }
@@ -22,7 +22,7 @@ resource "google_bigquery_dataset" "agent_evaluation" {
 resource "google_bigquery_table" "all_agents_view" {
   dataset_id = google_bigquery_dataset.agent_evaluation.dataset_id
   table_id   = "all_agents_interactions"
-  
+
   view {
     query = <<-SQL
       SELECT 
@@ -37,7 +37,7 @@ resource "google_bigquery_table" "all_agents_view" {
       WHERE _TABLE_SUFFIX != 'all_agents_interactions'
       ORDER BY timestamp DESC
     SQL
-    
+
     use_legacy_sql = false
   }
 }

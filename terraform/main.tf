@@ -63,7 +63,7 @@ module "storage" {
 
   project_id = var.project_id
   region     = var.region
-  
+
   dataset_retention_days = var.dataset_retention_days
 
   depends_on = [google_project_service.required_apis]
