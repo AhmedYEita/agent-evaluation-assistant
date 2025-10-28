@@ -26,4 +26,3 @@ variable "trace_sample_rate" {
   type        = number
   default     = 1.0
 }
-

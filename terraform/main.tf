@@ -51,9 +51,6 @@ module "logging" {
 module "monitoring" {
   source = "./modules/monitoring"
 
-  project_id = var.project_id
-  region     = var.region
-
   depends_on = [google_project_service.required_apis]
 }
 
