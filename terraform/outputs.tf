@@ -49,9 +49,9 @@ output "setup_complete" {
      )
   
   3. View results:
-     - Logs: ${self.logging_url}
-     - Traces: ${self.trace_url}
-     - Dashboards: ${self.dashboard_url}
+     - Logs: https://console.cloud.google.com/logs?project=${var.project_id}
+     - Traces: https://console.cloud.google.com/traces?project=${var.project_id}
+     - Dashboards: https://console.cloud.google.com/monitoring/dashboards?project=${var.project_id}
   
   Service Account: ${google_service_account.agent_evaluation.email}
   Dataset: ${module.storage.dataset_id}
