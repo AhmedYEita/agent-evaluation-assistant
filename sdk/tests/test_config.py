@@ -29,7 +29,7 @@ class TestEvaluationConfig:
         assert config.logging.level == "INFO"
         assert config.tracing.enabled is True
         assert config.metrics.enabled is True
-        assert config.dataset.auto_collect is True
+        assert config.dataset.auto_collect is False
     
     def test_custom_config(self):
         """Test creating custom configuration."""
@@ -38,12 +38,12 @@ class TestEvaluationConfig:
             agent_name="test-agent",
             logging=LoggingConfig(level="DEBUG"),
             tracing=TracingConfig(sample_rate=0.5),
-            dataset=DatasetConfig(sample_rate=0.2),
+            dataset=DatasetConfig(auto_collect=True),
         )
         
         assert config.logging.level == "DEBUG"
         assert config.tracing.sample_rate == 0.5
-        assert config.dataset.sample_rate == 0.2
+        assert config.dataset.auto_collect is True
     
     def test_from_yaml(self, tmp_path):
         """Test loading configuration from YAML file."""
@@ -99,8 +99,7 @@ class TestSubConfigs:
         """Test DatasetConfig default values."""
         config = DatasetConfig()
         
-        assert config.auto_collect is True
-        assert config.sample_rate == 0.1
+        assert config.auto_collect is False
         assert config.storage_location is None
 
 

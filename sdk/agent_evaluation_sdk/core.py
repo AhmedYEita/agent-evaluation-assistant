@@ -52,7 +52,6 @@ class EvaluationWrapper:
         self.dataset_collector = DatasetCollector(
             project_id=config.project_id,
             agent_name=config.agent_name,
-            sample_rate=config.dataset.sample_rate,
             storage_location=config.dataset.storage_location,
         )
 
@@ -63,7 +62,10 @@ class EvaluationWrapper:
         print("   - Logging: Cloud Logging")
         print(f"   - Tracing: Cloud Trace (sample rate: {config.tracing.sample_rate})")
         print("   - Metrics: Cloud Monitoring")
-        print(f"   - Dataset: {config.dataset.sample_rate * 100}% of interactions")
+        if config.dataset.auto_collect:
+            print("   - Dataset: Enabled (collecting all interactions)")
+        else:
+            print("   - Dataset: Disabled (opt-in via config)")
 
     def _wrap_agent(self) -> None:
         """Wrap agent methods with evaluation instrumentation."""

@@ -1,11 +1,11 @@
 output "bigquery_dataset_id" {
   description = "BigQuery dataset ID for agent evaluation data"
-  value       = module.storage.dataset_id
+  value       = module.dataset.dataset_id
 }
 
 output "bigquery_table_id" {
   description = "BigQuery table ID for agent interactions"
-  value       = module.storage.table_id
+  value       = module.dataset.table_id
 }
 
 output "service_account_email" {
@@ -54,7 +54,7 @@ output "setup_complete" {
      - Dashboards: https://console.cloud.google.com/monitoring/dashboards?project=${var.project_id}
   
   Service Account: ${google_service_account.agent_evaluation.email}
-  Dataset: ${module.storage.dataset_id}
+  Dataset: ${module.dataset.dataset_id}
   
   EOT
 }

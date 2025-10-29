@@ -50,7 +50,7 @@ After adding 1 line of code, your agent has:
 - **Deployment Target**: Agent Engine (ready for deployment)
 - **Infrastructure**: Terraform for GCP services
 - **Monitoring**: Cloud Logging, Trace, Monitoring
-- **Data Storage**: BigQuery for datasets
+- **Dataset Storage**: BigQuery for datasets
 - **CI/CD**: GitHub Actions for validation
 
 

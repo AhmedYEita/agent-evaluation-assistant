@@ -2,12 +2,9 @@
 
 resource "google_bigquery_dataset" "agent_evaluation" {
   dataset_id    = "agent_evaluation"
-  friendly_name = "Agent Evaluation Data"
-  description   = "Storage for agent interactions and evaluation datasets"
+  friendly_name = "Agent Evaluation Testing Data"
+  description   = "Storage for agent testing datasets"
   location      = var.region
-
-  # Default table expiration (optional - can be overridden per table)
-  default_table_expiration_ms = var.dataset_retention_days * 24 * 60 * 60 * 1000
 
   labels = {
     purpose = "agent-evaluation"

@@ -16,7 +16,6 @@ metrics:
   custom_metrics: []
 
 dataset:
-  auto_collect: true
-  sample_rate: 0.2  # Collect 20% of interactions
+  auto_collect: true  # When enabled, collects all interactions
   storage_location: null  # Use default (auto-created BigQuery table)
 

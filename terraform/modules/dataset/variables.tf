@@ -8,9 +8,3 @@ variable "region" {
   type        = string
 }
 
-variable "dataset_retention_days" {
-  description = "Number of days to retain data"
-  type        = number
-  default     = 90
-}
-

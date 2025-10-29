@@ -6,19 +6,10 @@ terraform {
       source  = "hashicorp/google"
       version = "~> 5.0"
     }
-    google-beta = {
-      source  = "hashicorp/google-beta"
-      version = "~> 5.0"
-    }
   }
 }
 
 provider "google" {
-  project = var.project_id
-  region  = var.region
-}
-
-provider "google-beta" {
   project = var.project_id
   region  = var.region
 }
@@ -54,14 +45,12 @@ module "monitoring" {
   depends_on = [google_project_service.required_apis]
 }
 
-# BigQuery for dataset storage
-module "storage" {
-  source = "./modules/storage"
+# BigQuery dataset for evaluation data
+module "dataset" {
+  source = "./modules/dataset"
 
   project_id = var.project_id
   region     = var.region
-
-  dataset_retention_days = var.dataset_retention_days
 
   depends_on = [google_project_service.required_apis]
 }

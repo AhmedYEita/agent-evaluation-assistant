@@ -316,7 +316,7 @@ response = agent.generate_content("Hello!")
 
 ### Configure Sampling (Optional)
 
-Reduce costs by sampling traces and datasets. Create `eval_config.yaml`:
+Reduce costs by sampling traces. Create `eval_config.yaml`:
 
 ```yaml
 logging:
@@ -324,7 +324,7 @@ logging:
 tracing:
   sample_rate: 0.1  # Trace 10% of requests
 dataset:
-  sample_rate: 0.05  # Collect 5% for dataset
+  auto_collect: true  # Enable dataset collection (collects all interactions)
 ```
 
 Then load it in your agent:

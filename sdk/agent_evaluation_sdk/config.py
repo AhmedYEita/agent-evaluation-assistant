@@ -38,8 +38,7 @@ class MetricsConfig:
 class DatasetConfig:
     """Configuration for dataset collection."""
 
-    auto_collect: bool = True
-    sample_rate: float = 0.1  # Collect 10% of interactions
+    auto_collect: bool = False  # Opt-in only
     storage_location: Optional[str] = None  # BigQuery table or GCS bucket
 
 

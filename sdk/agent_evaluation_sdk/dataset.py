@@ -3,7 +3,6 @@ Dataset collection for agent evaluation.
 """
 
 import json
-import random
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -17,7 +16,6 @@ class DatasetCollector:
         self,
         project_id: str,
         agent_name: str,
-        sample_rate: float = 0.1,
         storage_location: Optional[str] = None,
     ):
         """Initialize dataset collector.
@@ -25,12 +23,10 @@ class DatasetCollector:
         Args:
             project_id: GCP project ID
             agent_name: Name of the agent
-            sample_rate: Fraction of interactions to collect (0.0 to 1.0)
             storage_location: BigQuery table (project.dataset.table) or GCS bucket
         """
         self.project_id = project_id
         self.agent_name = agent_name
-        self.sample_rate = sample_rate
 
         # Default storage location
         if storage_location is None:
@@ -47,10 +43,6 @@ class DatasetCollector:
         # In-memory buffer for batch writes
         self.buffer: List[Dict[str, Any]] = []
         self.buffer_size = 10  # Write every 10 samples
-
-    def should_collect(self) -> bool:
-        """Determine if this interaction should be collected based on sample rate."""
-        return random.random() < self.sample_rate
 
     def add_interaction(
         self,
@@ -69,9 +61,6 @@ class DatasetCollector:
             metadata: Additional metadata (tokens, model, etc.)
             trajectory: List of intermediate steps (tool calls, reasoning, etc.)
         """
-        if not self.should_collect():
-            return
-
         # Create dataset entry
         entry = {
             "interaction_id": interaction_id,

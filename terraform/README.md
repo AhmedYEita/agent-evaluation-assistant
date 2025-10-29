@@ -7,7 +7,7 @@ This directory contains Infrastructure-as-Code (IaC) for deploying the complete 
 - **Cloud Logging**: Structured logging with custom log sinks
 - **Cloud Monitoring**: Dashboards, alerts, and custom metrics
 - **Cloud Trace**: Performance tracing configuration
-- **BigQuery**: Dataset storage for agent interactions
+- **BigQuery**: Testing dataset storage
 - **IAM**: Service accounts and permissions
 
 ## Prerequisites
