@@ -1,67 +1,38 @@
-# Setup Instructions
+# Complete Setup Guide
 
-Complete guide to setting up your development environment and deploying the agent evaluation infrastructure.
+This guide provides comprehensive instructions for setting up your development environment and deploying the agent evaluation infrastructure to Google Cloud Platform.
 
 ## Table of Contents
 
-1. [Local Development Setup](#local-development-setup)
+1. [Prerequisites](#prerequisites)
 2. [GCP Setup](#gcp-setup)
 3. [Infrastructure Deployment](#infrastructure-deployment)
 4. [SDK Installation](#sdk-installation)
-5. [Verification](#verification)
-6. [Next Steps](#next-steps)
+5. [Running the Example](#running-the-example)
+6. [Verification](#verification)
+7. [Configuration](#configuration)
+8. [Troubleshooting](#troubleshooting)
 
-## Local Development Setup
+## Prerequisites
 
-### Install Required Tools
+Before you begin, ensure you have:
 
-#### 1. Python 3.12+
+**GCP Requirements:**
+- [ ] A GCP project with billing enabled
+- [ ] Editor or Owner role on the project
 
-```bash
-# macOS
-brew install python@3.12
+**Local Tools:**
+- [ ] **Python 3.12+** ([Download](https://www.python.org/downloads/) or `brew install python@3.12`)
+- [ ] **Terraform 1.5+** ([Download](https://www.terraform.io/downloads) or `brew install terraform`)
+- [ ] **gcloud CLI** ([Download](https://cloud.google.com/sdk/docs/install) or `brew install google-cloud-sdk`)
+- [ ] **Git**
 
-# Ubuntu/Debian
-sudo apt update
-sudo apt install python3.12 python3.12-venv python3-pip
+> **Note:** If you use `pyenv`, the `.python-version` file will automatically switch to Python 3.12 when you enter the project directory (if 3.12 is already installed via `pyenv install 3.12.0`).
 
-# Windows
-# Download from https://www.python.org/downloads/
-```
-
-#### 2. Terraform
-
-```bash
-# macOS
-brew install terraform
-
-# Ubuntu/Debian
-wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
-echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
-sudo apt update && sudo apt install terraform
-
-# Windows
-# Download from https://www.terraform.io/downloads
-```
-
-#### 3. GCloud CLI
+## Clone Repository
 
 ```bash
-# macOS
-brew install google-cloud-sdk
-
-# Ubuntu/Debian
-curl https://sdk.cloud.google.com | bash
-exec -l $SHELL
-
-# Windows
-# Download from https://cloud.google.com/sdk/docs/install
-```
-
-### Clone Repository
-
-```bash
-git clone https://github.com/yourusername/agent-evaluation-agent.git
+git clone https://github.com/AhmedYEita/agent-evaluation-agent.git
 cd agent-evaluation-agent
 ```
 
@@ -73,18 +44,14 @@ cd agent-evaluation-agent
 # List existing projects
 gcloud projects list
 
-# Set active project (project already created)
-gcloud config set project dt-ahmedyasser-sandbox-dev
+# Set your project ID (replace with your actual project ID)
+export PROJECT_ID="gcp-project-id"
+
+# Set active project
+gcloud config set project $PROJECT_ID
 ```
 
-### 2. Enable Billing
-
-```bash
-# Billing is already configured for dt-ahmedyasser-sandbox-dev
-# No action needed
-```
-
-### 3. Authenticate
+### 2. Authenticate
 
 ```bash
 # Authenticate gcloud
@@ -94,7 +61,7 @@ gcloud auth login
 gcloud auth application-default login
 ```
 
-### 4. Enable Required APIs
+### 3. Enable Required APIs
 
 ```bash
 gcloud services enable \
@@ -105,22 +72,27 @@ gcloud services enable \
   aiplatform.googleapis.com
 ```
 
-### 5. Grant Permissions
+**Verification**:
+```bash
+gcloud services list --enabled | grep -E "(logging|monitoring|cloudtrace|bigquery|aiplatform)"
+```
+
+### 4. Grant Permissions
 
 ```bash
 # Get your user email
 USER_EMAIL=$(gcloud config get-value account)
 
 # Grant required roles (if not already granted)
-gcloud projects add-iam-policy-binding dt-ahmedyasser-sandbox-dev \
+gcloud projects add-iam-policy-binding $PROJECT_ID \
   --member="user:$USER_EMAIL" \
   --role="roles/editor"
 
-gcloud projects add-iam-policy-binding dt-ahmedyasser-sandbox-dev \
+gcloud projects add-iam-policy-binding $PROJECT_ID \
   --member="user:$USER_EMAIL" \
   --role="roles/logging.admin"
 
-gcloud projects add-iam-policy-binding dt-ahmedyasser-sandbox-dev \
+gcloud projects add-iam-policy-binding $PROJECT_ID \
   --member="user:$USER_EMAIL" \
   --role="roles/monitoring.admin"
 ```
@@ -132,7 +104,7 @@ gcloud projects add-iam-policy-binding dt-ahmedyasser-sandbox-dev \
 ```bash
 cd terraform
 
-# Create terraform.tfvars
+# Create terraform.tfvars with your project settings
 cat > terraform.tfvars <<EOF
 project_id = "$(gcloud config get-value project)"
 region     = "us-central1"
@@ -145,11 +117,19 @@ EOF
 terraform init
 ```
 
+**Expected Output**: `Terraform has been successfully initialized!`
+
 ### 3. Review Plan
 
 ```bash
 terraform plan
 ```
+
+Review the resources that will be created:
+- BigQuery dataset and tables
+- Cloud Logging bucket
+- Cloud Monitoring dashboard and alerts
+- Service account with IAM bindings
 
 ### 4. Deploy Infrastructure
 
@@ -160,121 +140,183 @@ terraform apply
 # Type 'yes' when prompted
 ```
 
-### 5. Save Outputs
+**Expected Output**:
+```
+Apply complete! Resources: X added, 0 changed, 0 destroyed.
+
+Outputs:
+bigquery_dataset = "gcp-project.agent_evaluation"
+dashboard_url = "https://console.cloud.google.com/monitoring/..."
+...
+```
+
+### 5. Verify Deployment
 
 ```bash
-# View outputs
-terraform output
+# Check BigQuery dataset
+bq ls --project_id=$(gcloud config get-value project) | grep agent_evaluation
 
-# Save to file (optional)
-terraform output -json > ../infrastructure-outputs.json
+# Check service account
+gcloud iam service-accounts list | grep agent-evaluation
+
+# View all outputs
+terraform output
 ```
 
 ## SDK Installation
 
-### Option 1: Development Installation (Recommended)
+### Development Installation
 
 ```bash
-cd ../sdk
+cd sdk
 
-# Create virtual environment
+# Create virtual environment (recommended)
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-# Install in development mode
+# Install SDK with development dependencies
 pip install -e ".[dev]"
 ```
 
-### Option 2: Production Installation
-
-```bash
-pip install agent-evaluation-sdk
-```
-
-## Verification
-
-### 1. Verify Terraform Deployment
-
-```bash
-cd terraform
-
-# Check resources were created
-gcloud logging buckets list
-gcloud monitoring dashboards list
-bq ls agent_evaluation
-```
-
-### 2. Verify SDK Installation
-
+**Verification**:
 ```bash
 # Test import
-python -c "from agent_evaluation_sdk import enable_evaluation; print('✅ SDK installed')"
+python -c "from agent_evaluation_sdk import enable_evaluation; print('✅ SDK installed successfully')"
 
 # Check CLI
 agent-eval --help
 ```
 
-### 3. Run Example Agent
+### Production Installation
+
+```bash
+pip install agent-evaluation-sdk
+```
+
+## Running the Example
+
+### 1. Install Example Dependencies
 
 ```bash
 cd ../examples/simple_adk_agent
-
-# Install example dependencies
 pip install -r requirements.txt
+```
 
-# Set project ID
+### 2. Set Environment Variable
+
+```bash
+# Set your project ID
 export GCP_PROJECT_ID=$(gcloud config get-value project)
+```
 
-# Run example
+### 3. Run the Example Agent
+
+```bash
 python agent.py
+```
+
+**Expected Output**:
+```
+🚀 Creating ADK Agent with Evaluation...
+
+✅ Evaluation enabled for agent: simple-adk-agent
+   - Logging: Cloud Logging
+   - Tracing: Cloud Trace (sample rate: 1.0)
+   - Metrics: Cloud Monitoring
+   - Dataset: 100.0% of interactions
+
+======================================================================
+Agent is ready! Try asking some questions.
+Type 'quit' to exit.
+======================================================================
+
+You: 
 ```
 
 **Try these queries:**
 - "What is Python?"
 - "Explain machine learning"
+- "Write a function to sort a list"
 - Type 'quit' to exit
 
-### 4. Verify Data Collection
+## Verification
+
+Wait 1-2 minutes for data to propagate, then verify all components:
+
+### Check Cloud Logging
 
 ```bash
-# Wait 1-2 minutes for data to propagate, then:
-
-# Check logs
 gcloud logging read "resource.labels.agent_name=simple-adk-agent" \
   --limit 5 \
   --format json
+```
 
-# Check BigQuery
-bq query --use_legacy_sql=false \
-  'SELECT COUNT(*) as count FROM `agent_evaluation.simple_adk_agent_interactions`'
+**Expected**: JSON logs with interaction_id, input, output, duration_ms
 
-# View dashboard
+### Check Cloud Trace
+
+```bash
+# Open Cloud Trace in browser
+open "https://console.cloud.google.com/traces?project=$(gcloud config get-value project)"
+```
+
+**Expected**: Trace entries showing agent.generate_content spans
+
+### Check Cloud Monitoring
+
+```bash
+# Open dashboards
 open "https://console.cloud.google.com/monitoring/dashboards?project=$(gcloud config get-value project)"
 ```
 
-## Next Steps
+**Expected**: "Agent Evaluation Dashboard" with metrics
 
-### 1. Integrate with Your Agent
+### Check BigQuery
+
+```bash
+# Query collected data
+bq query --use_legacy_sql=false \
+'SELECT 
+  interaction_id,
+  agent_name,
+  timestamp
+FROM `agent_evaluation.simple_adk_agent_interactions`
+ORDER BY timestamp DESC
+LIMIT 5'
+```
+
+**Expected**: Your test interactions in the table
+
+## Configuration
+
+### Integrate with Your Agent
+
+Add evaluation to your existing agent with one line:
 
 ```python
 from google.genai.adk import Agent
 from agent_evaluation_sdk import enable_evaluation
 
+# Your existing agent code
 agent = Agent(
     model="gemini-2.0-flash-exp",
     system_instruction="You are a helpful assistant",
 )
 
+# Enable evaluation - that's it!
 enable_evaluation(
     agent=agent,
-    project_id="dt-ahmedyasser-sandbox-dev",
-    agent_name="your-agent-name"
+    project_id="GCP_PROJECT_ID",
+    agent_name="agent-name"
 )
+
+# Use your agent normally
+response = agent.generate_content("Hello!")
 ```
 
-### 2. Configure Sampling (Optional)
+### Configure Sampling (Optional)
 
-Create `eval_config.yaml`:
+Reduce costs by sampling traces and datasets. Create `eval_config.yaml`:
 
 ```yaml
 logging:
@@ -285,30 +327,31 @@ dataset:
   sample_rate: 0.05  # Collect 5% for dataset
 ```
 
-### 3. Set Up CI/CD (Optional)
+Then load it in your agent:
 
-```bash
-# For GitHub Actions
-# Add secrets in repository settings:
-# - GCP_PROJECT_ID
-# - WIF_PROVIDER (Workload Identity Federation)
-# - WIF_SERVICE_ACCOUNT
+```python
+from agent_evaluation_sdk import enable_evaluation, load_config
 
-# Workflows are already configured in .github/workflows/
+config = load_config("eval_config.yaml")
+enable_evaluation(agent, "GCP_PROJECT_ID", "my-agent", config=config)
 ```
 
-### 4. Configure Alerts (Optional)
+### Configure Alerts (Optional)
+
+Alert policies for errors and high latency are automatically created by Terraform. To add email notifications:
 
 ```bash
-# Add notification channels in Cloud Console:
-# https://console.cloud.google.com/monitoring/alerting/notifications
-
-# Or via gcloud:
+# Create email notification channel
 gcloud alpha monitoring channels create \
-  --display-name="Email" \
+  --display-name="Team Email" \
   --type=email \
-  --channel-labels=email_address=your-email@example.com
+  --channel-labels=email_address=team@example.com
+
+# Or configure in Cloud Console:
+# https://console.cloud.google.com/monitoring/alerting/notifications
 ```
+
+Alert policies are automatically created by Terraform. Update them in `terraform/modules/monitoring/main.tf`.
 
 ## Troubleshooting
 
@@ -360,22 +403,28 @@ pip install -e ".[dev]"
 pip list | grep agent-evaluation
 ```
 
-## Resources
+## Cost Estimation
 
-- 📖 [Full Documentation](./docs/README.md)
-- 🚀 [Quick Start Guide](./docs/QUICKSTART.md)
-- 💬 [GitHub Issues](https://github.com/yourusername/agent-evaluation-agent/issues)
-- 🔧 [Contributing Guide](./CONTRIBUTING.md)
+Expected monthly costs for typical usage:
 
-## Support
+| Service | 10K requests | 100K requests |
+|---------|--------------|---------------|
+| Cloud Logging | $1-2 | $10-20 |
+| Cloud Trace | $0-1 | $2-5 |
+| Cloud Monitoring | $0-1 | $1-3 |
+| BigQuery | $1-2 | $5-10 |
+| **Total** | **~$5-10** | **~$20-40** |
 
-Need help? 
+💡 **Tip**: Use the sampling variables for tracing and dataset to reduce costs.
 
-1. Check [Troubleshooting](#troubleshooting) section
-2. Search [existing issues](https://github.com/yourusername/agent-evaluation-agent/issues)
-3. Open a [new issue](https://github.com/yourusername/agent-evaluation-agent/issues/new)
+## Additional Resources
+
+- 📖 [README](./README.md) - Project overview
+- 🔧 [CONTRIBUTING](./CONTRIBUTING.md) - Development guidelines
+- 📂 [Examples](./examples/) - Working code samples
+- 🐛 [GitHub Issues](https://github.com/AhmedYEita/agent-evaluation-agent/issues)
 
 ---
 
-**Ready to go?** Continue to the [Quick Start Guide](./docs/QUICKSTART.md) or [Full Documentation](./docs/README.md).
+**Questions?** Check the [Troubleshooting](#troubleshooting) section or open an issue on GitHub.
 

@@ -8,7 +8,7 @@ Thank you for your interest in contributing! This document provides guidelines a
 
 - Python 3.12+
 - Terraform 1.5+
-- GCP account (for testing)
+- GCP account with project access
 - Git
 
 ### Local Setup
@@ -25,14 +25,6 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 # Install SDK in development mode
 cd sdk
 pip install -e ".[dev]"
-
-# Run tests
-pytest
-
-# Check code quality
-black agent_evaluation_sdk/
-ruff check agent_evaluation_sdk/
-mypy agent_evaluation_sdk/
 ```
 
 ### Running Tests
@@ -49,6 +41,33 @@ pytest tests/test_core.py
 
 # Run with verbose output
 pytest -v
+```
+
+### Pre-Commit Quality Checks
+
+Before committing, run these checks locally:
+
+```bash
+# From repository root
+cd sdk
+
+# Format code
+black agent_evaluation_sdk/
+
+# Lint code
+ruff check agent_evaluation_sdk/
+
+# Type check
+mypy agent_evaluation_sdk/
+
+# Run tests
+pytest
+
+# Validate Terraform (from terraform/)
+cd ../terraform
+terraform fmt -recursive
+terraform init -backend=false
+terraform validate
 ```
 
 ## Project Structure
@@ -73,9 +92,11 @@ agent-evaluation-agent/
 │   │   ├── monitoring/
 │   │   └── storage/
 │   └── main.tf
-├── examples/                     # Usage examples
-├── docs/                        # Documentation
-└── .github/workflows/           # CI/CD
+├── examples/                    # Usage examples
+│   └── simple_adk_agent/       # Working demo agent
+└── .github/workflows/           # CI/CD pipelines
+    ├── test-sdk.yml            # SDK testing & quality checks
+    └── validate-infra.yml      # Terraform & infrastructure validation
 ```
 
 ## Making Changes
@@ -83,16 +104,15 @@ agent-evaluation-agent/
 ### Branching Strategy
 
 - `main` - Production-ready code
-- `develop` - Integration branch
-- `feature/*` - New features
+- `feat/*` - New features
 - `fix/*` - Bug fixes
 - `docs/*` - Documentation updates
 
-### Workflow
+### Development Workflow
 
 1. **Create a branch**
    ```bash
-   git checkout -b feature/your-feature-name
+   git checkout -b feat/your-feature-name
    ```
 
 2. **Make changes**
@@ -100,11 +120,13 @@ agent-evaluation-agent/
    - Add tests
    - Update documentation
 
-3. **Test locally**
+3. **Test locally** (before committing)
    ```bash
-   pytest
+   cd sdk
    black agent_evaluation_sdk/
    ruff check agent_evaluation_sdk/
+   mypy agent_evaluation_sdk/
+   pytest
    ```
 
 4. **Commit changes**
@@ -115,7 +137,8 @@ agent-evaluation-agent/
 
 5. **Push and create PR**
    ```bash
-   git push origin feature/your-feature-name
+   git push origin feat/your-feature-name
+   # Then create PR on GitHub targeting main branch
    ```
 
 ### Commit Message Format
@@ -199,13 +222,13 @@ def test_enable_evaluation():
     # Act
     wrapper = enable_evaluation(
         agent=mock_agent,
-        project_id="dt-ahmedyasser-sandbox-dev",
+        project_id="test-project-id",
         agent_name="test-agent"
     )
     
     # Assert
     assert wrapper is not None
-    assert wrapper.config.project_id == "dt-ahmedyasser-sandbox-dev"
+    assert wrapper.config.project_id == "test-project-id"
 ```
 
 ### Integration Tests
@@ -224,46 +247,42 @@ def test_enable_evaluation():
 
 ### User Documentation
 
-- Update README when adding features
+- Update README.md when adding features
 - Add examples for new functionality
-- Keep docs/ directory current
+- Update DEPLOYMENT_GUIDE.md if deployment process changes
 
 ## Pull Request Process
 
 1. **Before submitting:**
-   - All tests pass
-   - Code is formatted
-   - Documentation is updated
-   - No merge conflicts
+   - ✅ All tests pass locally
+   - ✅ Code is formatted with `black`
+   - ✅ No linting errors from `ruff`
+   - ✅ Type checking passes with `mypy`
+   - ✅ Terraform validates (if infrastructure changes)
+   - ✅ Documentation is updated
+   - ✅ No merge conflicts with `main`
 
 2. **PR Description should include:**
-   - What changed
-   - Why it changed
-   - How to test
-   - Screenshots (if UI changes)
+   - What changed and why
+   - How to test the changes
+   - Any breaking changes
+   - Related issues (if applicable)
 
-3. **Review process:**
-   - At least one approval required
-   - CI/CD checks must pass
-   - Address review comments
+3. **CI/CD Checks:**
+   - ✅ `test-sdk.yml` - SDK tests, linting, formatting, type checking
+   - ✅ `validate-infra.yml` - Terraform validation and SDK compatibility
+   
+   All checks must pass before merge.
 
 4. **After approval:**
-   - Squash and merge
+   - Squash and merge (preferred for clean history)
    - Delete feature branch
-
-## Release Process
-
-1. Update version in `sdk/pyproject.toml`
-2. Update CHANGELOG.md
-3. Create git tag: `git tag v0.2.0`
-4. Push tag: `git push origin v0.2.0`
-5. GitHub Action will create release and publish to PyPI
 
 ## Getting Help
 
-- 📖 Read the [documentation](./docs/README.md)
-- 💬 Open an [issue](https://github.com/your-repo/issues)
-- 📧 Contact maintainers
+- 📖 **Documentation**: Read the documentation
+- 💬 **Issues**: Open an issue on GitHub
+- 📧 **Questions**: Contact maintainers
 
 ## Code of Conduct
 
@@ -279,4 +298,3 @@ By contributing, you agree that your contributions will be licensed under the MI
 ---
 
 Thank you for contributing! 🎉
-
