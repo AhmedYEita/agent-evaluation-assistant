@@ -19,7 +19,6 @@ from agent_evaluation_sdk import RegressionTester
 
 def main():
     """Run evaluation test on the agent."""
-    test_run_name = datetime.now().strftime("test_%Y%m%d_%H%M")
 
     print("🧪 Loading configuration and agent...")
     print()
@@ -29,7 +28,6 @@ def main():
 
     print(f"   Project: {config.project_id}")
     print(f"   Agent: {config.agent_name}")
-    print(f"   Test Run: {test_run_name}")
     print()
 
     # Run evaluation test
@@ -37,12 +35,14 @@ def main():
         project_id=config.project_id, agent_name=config.agent_name
     )
 
-    print(f"🔄 Running evaluation test: {test_run_name}")
+    test_run_timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+
+    print(f"🔄 Running evaluation test: test_{test_run_timestamp}")
     print()
 
     results = tester.run_full_test(
         agent=agent,
-        test_run_name=test_run_name,
+        test_run_name=f"test_{test_run_timestamp}",
         only_reviewed=True,
         metrics=config.genai_eval.metrics,
         criteria=config.genai_eval.criteria,
@@ -53,10 +53,8 @@ def main():
         print("\n✅ Evaluation test complete!")
         print()
         print("📊 Results saved to BigQuery:")
-        timestamp = results.get("timestamp", "YYYYMMDD_HHMM")
-        print(f"   - Test Run: {test_run_name}")
-        print(f"   - Responses: {config.agent_name}_eval_{timestamp}")
-        print(f"   - Metrics: {config.agent_name}_eval_{timestamp}_metrics")
+        print(f"   - Responses: {config.agent_name}_eval_{test_run_timestamp}")
+        print(f"   - Metrics: {config.agent_name}_eval_{test_run_timestamp}_metrics")
         print()
         print("🔍 View results in BigQuery Console:")
         print(
