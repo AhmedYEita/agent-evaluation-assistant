@@ -15,10 +15,10 @@ resource "google_bigquery_dataset" "agent_evaluation" {
 # when enable_evaluation() is called. This provides flexibility for
 # multiple agents without pre-defining all tables.
 
-# Create a view for aggregated metrics across all agents (optional)
+# Create a view for aggregated test datasets across all agents (optional)
 resource "google_bigquery_table" "all_agents_view" {
   dataset_id = google_bigquery_dataset.agent_evaluation.dataset_id
-  table_id   = "all_agents_interactions"
+  table_id   = "all_agents_datasets"
 
   view {
     query = <<-SQL
@@ -26,12 +26,14 @@ resource "google_bigquery_table" "all_agents_view" {
         interaction_id,
         agent_name,
         timestamp,
-        input,
-        output,
+        instruction,
+        reference,
+        context,
+        reviewed,
         metadata,
         trajectory
       FROM `${var.project_id}.${google_bigquery_dataset.agent_evaluation.dataset_id}.*`
-      WHERE _TABLE_SUFFIX != 'all_agents_interactions'
+      WHERE _TABLE_SUFFIX LIKE '%_eval_dataset'
       ORDER BY timestamp DESC
     SQL
 

@@ -11,7 +11,8 @@ This guide provides comprehensive instructions for setting up your development e
 5. [Running the Example](#running-the-example)
 6. [Verification](#verification)
 7. [Configuration](#configuration)
-8. [Troubleshooting](#troubleshooting)
+8. [Agent Testing & Evaluation](#agent-testing--evaluation)
+9. [Troubleshooting](#troubleshooting)
 
 ## Prerequisites
 
@@ -182,9 +183,6 @@ pip install -e ".[dev]"
 ```bash
 # Test import
 python -c "from agent_evaluation_sdk import enable_evaluation; print('✅ SDK installed successfully')"
-
-# Check CLI
-agent-eval --help
 ```
 
 ### Production Installation
@@ -353,6 +351,72 @@ gcloud alpha monitoring channels create \
 
 Alert policies are automatically created by Terraform. Update them in `terraform/modules/monitoring/main.tf`.
 
+## Agent Testing & Evaluation
+
+Use Gen AI Evaluation Service to test your agent's quality with automated metrics and model-based criteria.
+
+### Overview
+
+**Recommended Workflow:**
+1. **Collect real interactions** - Enable auto_collect to capture agent responses
+2. **Review in BigQuery** - Manually review and update reference answers as needed
+3. **Run evaluation** - Test directly from BigQuery (no export needed!)
+
+### Workflow
+
+**1. Enable Collection** (`eval_config.yaml`):
+```yaml
+dataset:
+  auto_collect: true
+```
+
+**2. Run Agent** - Interactions auto-save to BigQuery:
+```python
+python agent.py  # All interactions stored in {agent_name}_eval_dataset
+```
+
+**3. Review in BigQuery Console** - Update ground truth:
+```sql
+UPDATE `PROJECT.agent_evaluation.my_agent_eval_dataset`
+SET reference = 'Correct answer here', reviewed = TRUE
+WHERE interaction_id = 'abc123'
+```
+
+**4. Run Evaluation Test**:
+```bash
+python run_evaluation.py  # Fetches test cases, runs agent, evaluates, saves results
+```
+
+### Available Metrics
+
+**Automated**: BLEU, ROUGE (fast, deterministic)  
+**Model-Based**: Coherence, Fluency, Safety, Groundedness, Fulfillment, Instruction Following, Verbosity
+
+### Configuration
+
+Configure in `eval_config.yaml`:
+```yaml
+dataset:
+  auto_collect: true
+
+genai_eval:
+  enabled: true
+  metrics: ["bleu", "rouge"]
+  criteria: ["coherence", "fluency", "safety", "groundedness"]
+```
+
+### Regression Testing
+
+Run `python run_evaluation.py` to test your current agent against the test dataset.
+
+**BigQuery Tables Created:**
+
+| Table | Contains |
+|-------|----------|
+| `{agent_name}_eval_dataset` | Test cases: `instruction`, `reference` |
+| `{agent_name}_eval_YYYYMMDD_HHMM` | New responses: `instruction`, `reference`, `response` |
+| `{agent_name}_eval_YYYYMMDD_HHMM_metrics` | Evaluation scores |
+
 ## Troubleshooting
 
 ### API Not Enabled
@@ -414,8 +478,6 @@ Expected monthly costs for typical usage:
 | Cloud Monitoring | $0-1 | $1-3 |
 | BigQuery | $1-2 | $5-10 |
 | **Total** | **~$5-10** | **~$20-40** |
-
-💡 **Tip**: Use the sampling variables for tracing and dataset to reduce costs.
 
 ## Additional Resources
 

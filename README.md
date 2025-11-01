@@ -23,25 +23,38 @@ terraform init
 terraform apply -var="project_id=GCP_PROJECT_ID"
 ```
 
-### 2. Enable Evaluation in Your Agent (1 line!)
+### 2. Configure Your Agent (eval_config.yaml)
+```yaml
+project_id: "GCP_PROJECT_ID"
+agent_name: "my-agent"
+
+agent:
+  model: "gemini-2.0-flash-exp"
+
+dataset:
+  auto_collect: true  # Enable dataset collection
+```
+
+### 3. Enable Evaluation (3 lines!)
 ```python
 from google.genai.adk import Agent
 from agent_evaluation_sdk import enable_evaluation
+from agent_evaluation_sdk.config import EvaluationConfig
 
-agent = Agent(model="gemini-2.0-flash-exp", system_instruction="...")
-
-# Enable evaluation - that's it!
-enable_evaluation(agent, "GCP_PROJECT_ID", "my-agent")
+config = EvaluationConfig.from_yaml(Path("eval_config.yaml"))
+agent = Agent(model=config.agent.model, system_instruction=config.agent.system_instruction)
+enable_evaluation(agent, config.project_id, config.agent_name, config=config)
 ```
 
 ## ✨ What You Get Automatically
 
-After adding 1 line of code, your agent has:
+After configuration, your agent has:
 
 ✅ **Structured Logging** - Every interaction logged to Cloud Logging  
 ✅ **Performance Tracing** - Latency breakdown in Cloud Trace  
 ✅ **Real-time Metrics** - Pre-built dashboard in Cloud Monitoring  
 ✅ **Dataset Collection** - Auto-capture to BigQuery for evaluation  
+✅ **Gen AI Evaluation** - Test agent quality with automated metrics and model-based criteria  
 ✅ **Error Tracking** - Automatic error logging and alerts  
 
 ## 🔧 Technical Stack
@@ -51,7 +64,31 @@ After adding 1 line of code, your agent has:
 - **Infrastructure**: Terraform for GCP services
 - **Monitoring**: Cloud Logging, Trace, Monitoring
 - **Dataset Storage**: BigQuery for datasets
+- **Evaluation**: Vertex AI Gen AI Evaluation Service
 - **CI/CD**: GitHub Actions for validation
+
+## 🧪 Agent Testing & Evaluation
+
+```bash
+# 1. Enable dataset collection in eval_config.yaml
+# 2. Run agent - interactions auto-collect to BigQuery
+python agent.py
+
+# 3. Review in BigQuery - update 'reference' field, set 'reviewed = TRUE'
+# 4. Run evaluation test
+python run_evaluation.py
+```
+
+**Workflow:**
+1. **Collect** - Agent responses stored in test dataset table
+2. **Review** - Update ground truth in BigQuery
+3. **Evaluate** - Run agent on test cases, compare responses vs ground truth
+
+**Available Metrics:**
+- **Automated**: BLEU, ROUGE
+- **Model-based**: Coherence, Fluency, Safety, Groundedness, Fulfillment, Instruction Following, Verbosity
+
+See [SETUP.md](./SETUP.md#agent-testing--evaluation) for details.
 
 
 ## 📁 Repository Structure

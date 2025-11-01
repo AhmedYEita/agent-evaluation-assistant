@@ -8,6 +8,7 @@ This directory contains Infrastructure-as-Code (IaC) for deploying the complete 
 - **Cloud Monitoring**: Dashboards, alerts, and custom metrics
 - **Cloud Trace**: Performance tracing configuration
 - **BigQuery**: Testing dataset storage
+- **Vertex AI**: Gen AI Evaluation Service integration
 - **IAM**: Service accounts and permissions
 
 ## Prerequisites

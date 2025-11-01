@@ -26,6 +26,7 @@ dependencies = [
     "google-cloud-trace>=1.13.0",
     "google-cloud-monitoring>=2.21.0",
     "google-cloud-bigquery>=3.21.0",
+    "google-cloud-aiplatform>=1.60.0",
     "google-genai>=1.0.0",
     "pydantic>=2.0.0",
     "pyyaml>=6.0",
@@ -42,9 +43,6 @@ dev = [
     "types-PyYAML>=6.0.0",
     "types-protobuf>=4.0.0",
 ]
-
-[project.scripts]
-agent-eval = "agent_evaluation_sdk.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/yourusername/agent-evaluation-agent"

@@ -2,54 +2,107 @@
 
 This example demonstrates how to integrate the agent evaluation SDK with an ADK agent.
 
-## Setup
+## What's Included
 
-1. Ensure infrastructure is deployed (see main README)
+**Files:**
+- `eval_config.yaml` - Configuration for evaluation parameters
+- `agent.py` - Agent with evaluation enabled
+- `run_evaluation.py` - Evaluation testing script
+- `requirements.txt` - Python dependencies
 
-2. Install dependencies:
+**Features:**
+- ✅ Easy integration (just a few lines of code)
+- ✅ Automatic logging, tracing, and metrics
+- ✅ Dataset collection for testing
+- ✅ Evaluation with Gen AI Evaluation Service
+
+## Quick Start
+
+### 1. Configure Your Agent
+
+Edit `eval_config.yaml` with your settings:
+
+```yaml
+project_id: "your-gcp-project-id"
+agent_name: "my-agent"
+
+agent:
+  model: "gemini-2.0-flash-exp"
+
+# Enable/disable features as needed
+logging:
+  enabled: true  # Set to false to disable
+
+dataset:
+  auto_collect: true  # Enable collecting interactions to construct a testing dataset
+
+genai_eval:
+  enabled: true
+  # List the metrics and criteria needed for evaluation
+  metrics: ["bleu", "rouge"]
+  criteria: ["coherence", "fluency", "safety"]
+```
+
+### 2. Install Dependencies
+
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Set up authentication:
+### 3. Set Up Authentication
+
 ```bash
 gcloud auth application-default login
 ```
 
-4. Configure your project:
-```bash
-export GCP_PROJECT_ID="gcp-project-id"
-```
+### 4. Run
 
-5. Run the agent:
 ```bash
+# Interactive mode - chat with your agent
 python agent.py
+
+# Evaluation mode - test agent on dataset
+python run_evaluation.py
 ```
-
-## What This Demonstrates
-
-- ✅ One-line integration with `enable_evaluation()`
-- ✅ Automatic logging to Cloud Logging
-- ✅ Performance tracing in Cloud Trace
-- ✅ Metrics in Cloud Monitoring
-- ✅ Dataset collection for evaluation
 
 ## View Results
 
-After running the agent:
+### Cloud Console
+
+```bash
+# Logs
+echo "https://console.cloud.google.com/logs?project=$GCP_PROJECT_ID"
+
+# Traces
+echo "https://console.cloud.google.com/traces?project=$GCP_PROJECT_ID"
+
+# Dashboards
+echo "https://console.cloud.google.com/monitoring/dashboards?project=$GCP_PROJECT_ID"
+
+# BigQuery
+echo "https://console.cloud.google.com/bigquery?project=$GCP_PROJECT_ID"
+```
+
+### Command Line
 
 ```bash
 # View logs
-gcloud logging read "resource.labels.agent_name=simple-adk-agent" \
+gcloud logging read "resource.labels.agent_name=my-agent" \
   --limit 10 --project $GCP_PROJECT_ID
 
-# View metrics (open in browser)
-echo "https://console.cloud.google.com/monitoring/dashboards?project=$GCP_PROJECT_ID"
+# Query collected dataset
+bq query --use_legacy_sql=false \
+  'SELECT * FROM `agent_evaluation.my_agent_eval_dataset` LIMIT 10'
 
-# Export dataset
-agent-eval export-dataset \
-  --project-id $GCP_PROJECT_ID \
-  --agent-name simple-adk-agent \
-  --output dataset.json
+# View test results
+bq query --use_legacy_sql=false \
+  'SELECT * FROM `agent_evaluation.my_agent_eval_*_metrics` ORDER BY test_timestamp DESC LIMIT 5'
 ```
 
+## Workflow
+
+1. **Collect Data**: Run `python agent.py` with `auto_collect: true` to collect interactions
+2. **Review in BigQuery**: Update `reference` field with correct answers, set `reviewed = TRUE`
+3. **Run Tests**: Use `python run_evaluation.py` to evaluate agent (each run gets unique timestamp)
+
+**Tables**: Test dataset → Test run responses → Metrics (see [SETUP.md](../../SETUP.md))

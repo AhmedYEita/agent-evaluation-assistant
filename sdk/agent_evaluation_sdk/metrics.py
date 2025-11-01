@@ -45,7 +45,10 @@ class CloudMetrics:
         )
 
     def record_token_count(
-        self, input_tokens: int, output_tokens: int, labels: Optional[Dict[str, str]] = None
+        self,
+        input_tokens: int,
+        output_tokens: int,
+        labels: Optional[Dict[str, str]] = None,
     ) -> None:
         """Record token usage for the interaction.
 

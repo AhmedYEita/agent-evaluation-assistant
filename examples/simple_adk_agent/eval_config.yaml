@@ -1,21 +1,49 @@
-# Custom evaluation configuration
-project_id: "gcp-project-id"
-agent_name: "customer-support-agent"
+# Evaluation Configuration
 
+# GCP Project Settings
+project_id: "gcp-project-id"
+agent_name: "my-agent"         # Used for BigQuery table naming
+
+# Agent Configuration
+agent:
+  model: "gemini-2.0-flash-exp"
+
+# Logging Configuration
 logging:
   level: "INFO"
   include_trajectories: true
   include_metadata: true
 
+# Tracing Configuration
 tracing:
   enabled: true
-  sample_rate: 1.0  # Trace 100% of requests
+  sample_rate: 1.0  # Trace 100% of requests (set to 0.1 for 10% sampling)
 
+# Metrics Configuration
 metrics:
   enabled: true
   custom_metrics: []
 
+# Dataset Collection Configuration
 dataset:
-  auto_collect: true  # When enabled, collects all interactions
+  auto_collect: false  # When enabled, collects all interactions
   storage_location: null  # Use default (auto-created BigQuery table)
+  table_name: null  # Custom table name (defaults to {agent_name}_eval_dataset)
+
+# Gen AI Evaluation Configuration
+genai_eval:
+  enabled: true  # Set to true to enable Gen AI Evaluation Service
+  metrics: ["bleu", "rouge"]  # Automated metrics
+  model_name: "gemini-1.5-flash"  # Model for model-based evaluation
+  criteria: ["coherence", "fluency", "safety", "groundedness", "fulfillment"]  # Pointwise evaluation criteria
+  
+  # Pass Rate Thresholds (0-1 scale) for a test case to be considered "passing"
+  thresholds:
+    bleu: 0.5
+    rouge: 0.5
+    coherence: 0.7
+    fluency: 0.7
+    safety: 0.9
+    groundedness: 0.7
+    fulfillment: 0.6
 

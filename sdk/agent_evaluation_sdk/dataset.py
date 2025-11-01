@@ -30,7 +30,7 @@ class DatasetCollector:
 
         # Default storage location
         if storage_location is None:
-            storage_location = f"{project_id}.agent_evaluation.{agent_name}_interactions"
+            storage_location = f"{project_id}.agent_evaluation.{agent_name}_eval_dataset"
 
         self.storage_location = storage_location
 
@@ -52,22 +52,33 @@ class DatasetCollector:
         metadata: Optional[Dict[str, Any]] = None,
         trajectory: Optional[List[Dict[str, Any]]] = None,
     ) -> None:
-        """Add an interaction to the dataset.
+        """Add an interaction to the test dataset.
+
+        The agent's response is stored as the reference (ground truth).
+        Users can review and update the reference in BigQuery if needed.
 
         Args:
             interaction_id: Unique ID for this interaction
             input_data: User input/prompt
-            output_data: Agent response
+            output_data: Agent response (saved as reference/ground truth)
             metadata: Additional metadata (tokens, model, etc.)
             trajectory: List of intermediate steps (tool calls, reasoning, etc.)
         """
-        # Create dataset entry
+        # Serialize input and output
+        instruction = self._serialize(input_data)
+        response = self._serialize(output_data)
+
+        # Create dataset entry (Gen AI Evaluation Service compatible)
         entry = {
             "interaction_id": interaction_id,
             "agent_name": self.agent_name,
             "timestamp": datetime.utcnow().isoformat(),
-            "input": self._serialize(input_data),
-            "output": self._serialize(output_data),
+            # Gen AI Evaluation Service fields
+            "instruction": instruction,  # User's question/prompt
+            "reference": response,  # Agent's response becomes the reference (ground truth)
+            "context": None,  # Optional: can be populated from metadata
+            "reviewed": False,  # Flag to track manual review status
+            # Additional debugging fields
             "metadata": metadata or {},
             "trajectory": trajectory or [],
         }
@@ -98,72 +109,21 @@ class DatasetCollector:
         except Exception as e:
             print(f"Warning: Failed to write dataset entries: {e}")
 
-    def export_dataset(
-        self,
-        output_path: str,
-        start_date: Optional[str] = None,
-        end_date: Optional[str] = None,
-        limit: Optional[int] = None,
-    ) -> None:
-        """Export collected interactions to a JSON file.
-
-        Args:
-            output_path: Path to output JSON file
-            start_date: Start date filter (ISO format)
-            end_date: End date filter (ISO format)
-            limit: Maximum number of interactions to export
-        """
-        # Build query
-        query = f"""
-            SELECT *
-            FROM `{self.storage_location}`
-            WHERE agent_name = @agent_name
-        """
-
-        if start_date:
-            query += " AND timestamp >= @start_date"
-        if end_date:
-            query += " AND timestamp <= @end_date"
-
-        query += " ORDER BY timestamp DESC"
-
-        if limit:
-            query += f" LIMIT {limit}"
-
-        # Execute query
-        job_config = bigquery.QueryJobConfig(
-            query_parameters=[
-                bigquery.ScalarQueryParameter("agent_name", "STRING", self.agent_name),
-            ]
-        )
-
-        if start_date:
-            job_config.query_parameters.append(
-                bigquery.ScalarQueryParameter("start_date", "STRING", start_date)
-            )
-        if end_date:
-            job_config.query_parameters.append(
-                bigquery.ScalarQueryParameter("end_date", "STRING", end_date)
-            )
-
-        query_job = self.bq_client.query(query, job_config=job_config)
-        results = query_job.result()
-
-        # Write to file
-        interactions = [dict(row) for row in results]
-        with open(output_path, "w") as f:
-            json.dump(interactions, f, indent=2, default=str)
-
-        print(f"Exported {len(interactions)} interactions to {output_path}")
-
     def _ensure_table_exists(self) -> None:
-        """Create BigQuery table if it doesn't exist."""
+        """Create BigQuery table for test dataset if it doesn't exist."""
+        # Schema for test dataset (stores test cases with ground truth)
         schema = [
             bigquery.SchemaField("interaction_id", "STRING", mode="REQUIRED"),
             bigquery.SchemaField("agent_name", "STRING", mode="REQUIRED"),
             bigquery.SchemaField("timestamp", "TIMESTAMP", mode="REQUIRED"),
-            bigquery.SchemaField("input", "STRING", mode="REQUIRED"),
-            bigquery.SchemaField("output", "STRING", mode="REQUIRED"),
+            # Test case fields
+            bigquery.SchemaField("instruction", "STRING", mode="REQUIRED"),  # User query/prompt
+            bigquery.SchemaField(
+                "reference", "STRING", mode="REQUIRED"
+            ),  # Ground truth (agent's response, can be updated after review)
+            bigquery.SchemaField("context", "STRING", mode="NULLABLE"),  # Optional context
+            bigquery.SchemaField("reviewed", "BOOLEAN", mode="NULLABLE"),  # Manual review flag
+            # Additional fields for debugging
             bigquery.SchemaField("metadata", "JSON", mode="NULLABLE"),
             bigquery.SchemaField("trajectory", "JSON", mode="NULLABLE"),
         ]

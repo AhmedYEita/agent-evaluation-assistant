@@ -69,6 +69,7 @@ resource "google_project_iam_member" "agent_evaluation_permissions" {
     "roles/cloudtrace.agent",
     "roles/monitoring.metricWriter",
     "roles/bigquery.dataEditor",
+    "roles/aiplatform.user",
   ])
 
   project = var.project_id
