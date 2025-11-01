@@ -2,7 +2,7 @@
 Gen AI Evaluation Service integration.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 from google.cloud import aiplatform
 
@@ -78,7 +78,7 @@ class GenAIEvaluator:
             print(f"   Thresholds: {thresholds}")
 
         # Run automated metrics
-        results = {
+        results: Dict[str, Any] = {
             "dataset_size": len(dataset),
             "metrics": {},
             "criteria_scores": {},
@@ -89,20 +89,20 @@ class GenAIEvaluator:
             bleu_scores = self._calculate_bleu(dataset)
             # Add pass rate if threshold is defined
             if "bleu" in thresholds and bleu_scores.get("score"):
-                bleu_scores["pass_rate"] = (
-                    1.0 if bleu_scores["score"] >= thresholds["bleu"] else 0.0
-                )
-            results["metrics"]["bleu"] = bleu_scores
+                score_value = cast(float, bleu_scores["score"])
+                pass_rate_value = 1.0 if score_value >= thresholds["bleu"] else 0.0
+                bleu_scores = {**bleu_scores, "pass_rate": pass_rate_value}
+            cast(Dict[str, Any], results["metrics"])["bleu"] = bleu_scores
 
         # Calculate ROUGE if requested
         if "rouge" in metrics:
             rouge_scores = self._calculate_rouge(dataset)
             # Add pass rate if threshold is defined (uses rougeL as primary metric)
             if "rouge" in thresholds and rouge_scores.get("rougeL"):
-                rouge_scores["pass_rate"] = (
-                    1.0 if rouge_scores["rougeL"] >= thresholds["rouge"] else 0.0
-                )
-            results["metrics"]["rouge"] = rouge_scores
+                rougel_value = cast(float, rouge_scores["rougeL"])
+                pass_rate_value = 1.0 if rougel_value >= thresholds["rouge"] else 0.0
+                rouge_scores = {**rouge_scores, "pass_rate": pass_rate_value}
+            cast(Dict[str, Any], results["metrics"])["rouge"] = rouge_scores
 
         # Run pointwise evaluation for criteria
         if criteria:
@@ -146,14 +146,18 @@ class GenAIEvaluator:
 
             # Extract BLEU score from results
             # Vertex AI returns a DataFrame-like structure
-            if hasattr(result, "summary_metrics"):
+            if hasattr(result, "summary_metrics") and result.summary_metrics:
                 bleu_score = result.summary_metrics.get("bleu/mean", 0.0)
-            else:
+            elif hasattr(result, "metrics_table") and result.metrics_table:
                 # Fallback: calculate from row metrics
-                bleu_scores = [
+                bleu_scores_list = [
                     row.get("bleu", 0.0) for row in result.metrics_table if "bleu" in row
                 ]
-                bleu_score = sum(bleu_scores) / len(bleu_scores) if bleu_scores else 0.0
+                bleu_score = (
+                    sum(bleu_scores_list) / len(bleu_scores_list) if bleu_scores_list else 0.0
+                )
+            else:
+                bleu_score = 0.0
 
             return {
                 "score": round(bleu_score, 4),
@@ -202,7 +206,7 @@ class GenAIEvaluator:
             # Create evaluation task
             eval_task = EvalTask(
                 dataset=eval_dataset,
-                metrics=["rouge"],
+                metrics=cast(Any, ["rouge"]),
             )
 
             # Run evaluation
@@ -303,28 +307,29 @@ class GenAIEvaluator:
                     # Create evaluation task for this criterion
                     eval_task = EvalTask(
                         dataset=eval_dataset,
-                        metrics=[criterion],
+                        metrics=cast(Any, [criterion]),
                     )
 
                     # Run evaluation
-                    result = eval_task.evaluate(model=self.model_name)
+                    result = eval_task.evaluate(model=cast(Any, self.model_name))
 
                     # Extract score (Vertex AI typically returns 1-5 scale)
-                    if hasattr(result, "summary_metrics"):
+                    raw_score = 0.0
+                    if hasattr(result, "summary_metrics") and result.summary_metrics:
                         raw_score = result.summary_metrics.get(f"{criterion}/mean", 0.0)
-                    else:
+                    elif hasattr(result, "metrics_table") and result.metrics_table:
                         # Fallback: calculate from row metrics
-                        scores = [
+                        scores_list = [
                             row.get(criterion, 0.0)
                             for row in result.metrics_table
                             if criterion in row
                         ]
-                        raw_score = sum(scores) / len(scores) if scores else 0.0
+                        raw_score = sum(scores_list) / len(scores_list) if scores_list else 0.0
 
                     # Normalize to 0-1 scale if needed (Vertex AI uses 1-5)
                     normalized_score = raw_score / 5.0 if raw_score > 1.0 else raw_score
 
-                    result_dict = {
+                    result_dict: Dict[str, Any] = {
                         "score": round(normalized_score, 4),
                         "count": len(dataset),
                     }
@@ -332,7 +337,7 @@ class GenAIEvaluator:
                     # Calculate pass rate if threshold is defined
                     if criterion in thresholds:
                         # For per-sample scores, calculate actual pass rate
-                        if hasattr(result, "metrics_table"):
+                        if hasattr(result, "metrics_table") and result.metrics_table:
                             per_sample_scores = [
                                 (
                                     row.get(criterion, 0.0) / 5.0

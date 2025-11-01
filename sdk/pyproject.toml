@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 license = {text = "MIT"}
 authors = [
-    {name = "Ahmed Yasser Eita", email = "ahmed@example.com"}
+    {name = "Ahmed Yasser Eita", email = "ahmedyasser.eita@datatonic.com"}
 ]
 keywords = ["ai", "agents", "evaluation", "gcp", "adk", "monitoring"]
 classifiers = [
