@@ -49,8 +49,7 @@ module "monitoring" {
 module "dataset" {
   source = "./modules/dataset"
 
-  project_id = var.project_id
-  region     = var.region
+  region = var.region
 
   depends_on = [google_project_service.required_apis]
 }
