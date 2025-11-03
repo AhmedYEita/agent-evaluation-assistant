@@ -1,5 +1,4 @@
-# BigQuery dataset and tables for agent evaluation data
-
+# BigQuery dataset for agent evaluation data
 resource "google_bigquery_dataset" "agent_evaluation" {
   dataset_id    = "agent_evaluation"
   friendly_name = "Agent Evaluation Testing Data"
@@ -8,36 +7,6 @@ resource "google_bigquery_dataset" "agent_evaluation" {
 
   labels = {
     purpose = "agent-evaluation"
-  }
-}
-
-# Note: Individual agent tables will be created automatically by the SDK
-# when enable_evaluation() is called. This provides flexibility for
-# multiple agents without pre-defining all tables.
-
-# Create a view for aggregated test datasets across all agents (optional)
-resource "google_bigquery_table" "all_agents_view" {
-  dataset_id = google_bigquery_dataset.agent_evaluation.dataset_id
-  table_id   = "all_agents_datasets"
-
-  view {
-    query = <<-SQL
-      SELECT 
-        interaction_id,
-        agent_name,
-        timestamp,
-        instruction,
-        reference,
-        context,
-        reviewed,
-        metadata,
-        trajectory
-      FROM `${var.project_id}.${google_bigquery_dataset.agent_evaluation.dataset_id}.*`
-      WHERE _TABLE_SUFFIX LIKE '%_eval_dataset'
-      ORDER BY timestamp DESC
-    SQL
-
-    use_legacy_sql = false
   }
 }
 

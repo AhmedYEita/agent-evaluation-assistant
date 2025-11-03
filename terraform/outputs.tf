@@ -3,29 +3,9 @@ output "bigquery_dataset_id" {
   value       = module.dataset.dataset_id
 }
 
-output "bigquery_table_id" {
-  description = "BigQuery table ID for agent interactions"
-  value       = module.dataset.table_id
-}
-
 output "service_account_email" {
   description = "Service account email for agent evaluation"
   value       = google_service_account.agent_evaluation.email
-}
-
-output "dashboard_url" {
-  description = "URL to Cloud Monitoring dashboards"
-  value       = "https://console.cloud.google.com/monitoring/dashboards?project=${var.project_id}"
-}
-
-output "logging_url" {
-  description = "URL to Cloud Logging"
-  value       = "https://console.cloud.google.com/logs?project=${var.project_id}"
-}
-
-output "trace_url" {
-  description = "URL to Cloud Trace"
-  value       = "https://console.cloud.google.com/traces?project=${var.project_id}"
 }
 
 output "setup_complete" {

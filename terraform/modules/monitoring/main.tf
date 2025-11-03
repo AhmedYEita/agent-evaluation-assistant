@@ -1,5 +1,3 @@
-# Cloud Monitoring configuration for agent evaluation
-
 # Create a monitoring dashboard for agent metrics
 resource "google_monitoring_dashboard" "agent_evaluation" {
   dashboard_json = jsonencode({
@@ -18,7 +16,7 @@ resource "google_monitoring_dashboard" "agent_evaluation" {
                   timeSeriesFilter = {
                     filter = "metric.type=\"custom.googleapis.com/agent/latency\""
                     aggregation = {
-                      alignmentPeriod  = "60s"
+                      alignmentPeriod  = var.metric_alignment_period
                       perSeriesAligner = "ALIGN_MEAN"
                     }
                   }
@@ -46,7 +44,7 @@ resource "google_monitoring_dashboard" "agent_evaluation" {
                     timeSeriesFilter = {
                       filter = "metric.type=\"custom.googleapis.com/agent/tokens/input\""
                       aggregation = {
-                        alignmentPeriod  = "60s"
+                        alignmentPeriod  = var.metric_alignment_period
                         perSeriesAligner = "ALIGN_MEAN"
                       }
                     }
@@ -59,7 +57,7 @@ resource "google_monitoring_dashboard" "agent_evaluation" {
                     timeSeriesFilter = {
                       filter = "metric.type=\"custom.googleapis.com/agent/tokens/output\""
                       aggregation = {
-                        alignmentPeriod  = "60s"
+                        alignmentPeriod  = var.metric_alignment_period
                         perSeriesAligner = "ALIGN_MEAN"
                       }
                     }
@@ -87,7 +85,7 @@ resource "google_monitoring_dashboard" "agent_evaluation" {
                   timeSeriesFilter = {
                     filter = "metric.type=\"custom.googleapis.com/agent/success\""
                     aggregation = {
-                      alignmentPeriod    = "60s"
+                      alignmentPeriod    = var.metric_alignment_period
                       perSeriesAligner   = "ALIGN_RATE"
                       crossSeriesReducer = "REDUCE_SUM"
                     }
@@ -111,7 +109,7 @@ resource "google_monitoring_dashboard" "agent_evaluation" {
                   timeSeriesFilter = {
                     filter = "metric.type=\"custom.googleapis.com/agent/errors\""
                     aggregation = {
-                      alignmentPeriod    = "60s"
+                      alignmentPeriod    = var.metric_alignment_period
                       perSeriesAligner   = "ALIGN_RATE"
                       crossSeriesReducer = "REDUCE_SUM"
                       groupByFields      = ["metric.label.error_type"]
@@ -138,12 +136,12 @@ resource "google_monitoring_alert_policy" "high_error_rate" {
 
     condition_threshold {
       filter          = "metric.type=\"custom.googleapis.com/agent/errors\" resource.type=\"global\""
-      duration        = "300s"
+      duration        = var.alert_duration
       comparison      = "COMPARISON_GT"
-      threshold_value = 0.05
+      threshold_value = var.error_rate_threshold
 
       aggregations {
-        alignment_period   = "60s"
+        alignment_period   = var.metric_alignment_period
         per_series_aligner = "ALIGN_RATE"
       }
     }
@@ -157,7 +155,7 @@ resource "google_monitoring_alert_policy" "high_error_rate" {
   notification_channels = []
 
   alert_strategy {
-    auto_close = "1800s"
+    auto_close = var.alert_auto_close
   }
 }
 
@@ -171,12 +169,12 @@ resource "google_monitoring_alert_policy" "high_latency" {
 
     condition_threshold {
       filter          = "metric.type=\"custom.googleapis.com/agent/latency\" resource.type=\"global\""
-      duration        = "300s"
+      duration        = var.alert_duration
       comparison      = "COMPARISON_GT"
-      threshold_value = 5000 # 5 seconds in milliseconds
+      threshold_value = var.latency_threshold_ms
 
       aggregations {
-        alignment_period   = "60s"
+        alignment_period   = var.metric_alignment_period
         per_series_aligner = "ALIGN_MEAN"
       }
     }
@@ -190,7 +188,6 @@ resource "google_monitoring_alert_policy" "high_latency" {
   notification_channels = []
 
   alert_strategy {
-    auto_close = "1800s"
+    auto_close = var.alert_auto_close
   }
 }
-

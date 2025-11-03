@@ -52,9 +52,10 @@ See `variables.tf` for all available options.
 
 After deployment, Terraform will output:
 
-- BigQuery dataset and table names
-- Dashboard URLs
-- Service account emails
+- BigQuery dataset ID
+- Service account email
+- Setup instructions with next steps
+- Logs, Traces, and Dashboards URLs
 
 ## Usage
 
