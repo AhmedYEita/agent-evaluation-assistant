@@ -32,7 +32,6 @@ agent_name: "your-agent-name"
 
 tracing:
   enabled: true
-  sample_rate: 1.0  # Adjust for cost control
   
 dataset:
   auto_collect: false  # Enable to collect test data

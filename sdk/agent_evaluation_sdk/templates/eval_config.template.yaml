@@ -10,13 +10,13 @@ agent:
 
 # Logging Configuration
 logging:
+  enabled: true
   level: "INFO"
   include_trajectories: true
 
 # Tracing Configuration
 tracing:
   enabled: true
-  sample_rate: 1.0  # Trace 100% of requests (set to 0.1 for 10% sampling)
 
 # Metrics Configuration
 metrics:

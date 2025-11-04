@@ -13,6 +13,7 @@ import yaml
 class LoggingConfig:
     """Configuration for Cloud Logging."""
 
+    enabled: bool = True
     level: str = "INFO"
     include_trajectories: bool = True
 
@@ -22,7 +23,6 @@ class TracingConfig:
     """Configuration for Cloud Trace."""
 
     enabled: bool = True
-    sample_rate: float = 1.0  # Trace 100% of requests by default
 
 
 @dataclass

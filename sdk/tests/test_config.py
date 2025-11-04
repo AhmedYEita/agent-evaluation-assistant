@@ -37,12 +37,12 @@ class TestEvaluationConfig:
             project_id="test-project",
             agent_name="test-agent",
             logging=LoggingConfig(level="DEBUG"),
-            tracing=TracingConfig(sample_rate=0.5),
+            tracing=TracingConfig(enabled=True),
             dataset=DatasetConfig(auto_collect=True),
         )
         
         assert config.logging.level == "DEBUG"
-        assert config.tracing.sample_rate == 0.5
+        assert config.tracing.enabled is True
         assert config.dataset.auto_collect is True
     
     def test_from_yaml(self, tmp_path):
@@ -77,6 +77,7 @@ class TestSubConfigs:
         """Test LoggingConfig default values."""
         config = LoggingConfig()
         
+        assert config.enabled is True
         assert config.level == "INFO"
         assert config.include_trajectories is True
     
@@ -85,7 +86,6 @@ class TestSubConfigs:
         config = TracingConfig()
         
         assert config.enabled is True
-        assert config.sample_rate == 1.0
     
     def test_metrics_config_defaults(self):
         """Test MetricsConfig default values."""

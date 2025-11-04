@@ -46,16 +46,23 @@ agent = Agent(model=config.agent.model, system_instruction=config.agent.system_i
 enable_evaluation(agent, config.project_id, config.agent_name, config=config)
 ```
 
-## ✨ What You Get Automatically
+## ✨ What You Get
 
-After configuration, your agent has:
+### Real-time Monitoring (Automatic)
+After `enable_evaluation()`, every agent interaction automatically gets:
 
 ✅ **Structured Logging** - Every interaction logged to Cloud Logging  
 ✅ **Performance Tracing** - Latency breakdown in Cloud Trace  
 ✅ **Real-time Metrics** - Pre-built dashboard in Cloud Monitoring  
-✅ **Dataset Collection** - Auto-capture to BigQuery for evaluation  
-✅ **Gen AI Evaluation** - Test agent quality with automated metrics and model-based criteria  
 ✅ **Error Tracking** - Automatic error logging and alerts  
+✅ **Dataset Collection** - Optional auto-capture to BigQuery
+
+### Quality Testing (Manual)
+Run `python run_evaluation.py` to test your agent:
+
+🧪 **Regression Testing** - Test against historical dataset  
+📊 **Quality Metrics** - BLEU, ROUGE, coherence, fluency, safety  
+📈 **Performance Tracking** - Compare test runs over time  
 
 ## 🔧 Technical Stack
 

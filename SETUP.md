@@ -312,15 +312,18 @@ enable_evaluation(
 response = agent.generate_content("Hello!")
 ```
 
-### Configure Sampling (Optional)
+### Advanced Configuration (Optional)
 
-Reduce costs by sampling traces. Create `eval_config.yaml`:
+Customize services in `eval_config.yaml`:
 
 ```yaml
 logging:
   level: "INFO"
+  include_trajectories: true
 tracing:
-  sample_rate: 0.1  # Trace 10% of requests
+  enabled: true
+metrics:
+  enabled: true
 dataset:
   auto_collect: true  # Enable dataset collection (collects all interactions)
 ```

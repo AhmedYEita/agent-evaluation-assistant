@@ -14,17 +14,15 @@ from google.cloud.trace_v2.types import Span, TruncatableString
 class CloudTracer:
     """Wrapper for Cloud Trace to track agent performance."""
 
-    def __init__(self, project_id: str, agent_name: str, sample_rate: float = 1.0):
+    def __init__(self, project_id: str, agent_name: str):
         """Initialize Cloud Tracer.
 
         Args:
             project_id: GCP project ID
             agent_name: Name of the agent
-            sample_rate: Fraction of requests to trace (0.0 to 1.0)
         """
         self.project_id = project_id
         self.agent_name = agent_name
-        self.sample_rate = sample_rate
 
         # Initialize Cloud Trace client
         self.client = TraceServiceClient()

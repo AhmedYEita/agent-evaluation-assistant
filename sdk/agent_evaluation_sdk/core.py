@@ -31,12 +31,14 @@ class EvaluationWrapper:
         self.agent = agent
         self.config = config
 
-        # Initialize evaluation components
-        self.logger = CloudLogger(
-            project_id=config.project_id,
-            agent_name=config.agent_name,
-            log_level=config.logging.level,
-        )
+        # Initialize logger only if enabled
+        self.logger = None
+        if config.logging.enabled:
+            self.logger = CloudLogger(
+                project_id=config.project_id,
+                agent_name=config.agent_name,
+                log_level=config.logging.level,
+            )
 
         # Initialize tracer only if enabled
         self.tracer = None
@@ -44,7 +46,6 @@ class EvaluationWrapper:
             self.tracer = CloudTracer(
                 project_id=config.project_id,
                 agent_name=config.agent_name,
-                sample_rate=config.tracing.sample_rate,
             )
 
         # Initialize metrics only if enabled
@@ -68,10 +69,14 @@ class EvaluationWrapper:
         self._wrap_agent()
 
         print(f"✅ Evaluation enabled for agent: {config.agent_name}")
-        print("   - Logging: Cloud Logging")
+        
+        if config.logging.enabled:
+            print("   - Logging: Cloud Logging")
+        else:
+            print("   - Logging: Disabled")
 
         if config.tracing.enabled:
-            print(f"   - Tracing: Cloud Trace (sample rate: {config.tracing.sample_rate})")
+            print("   - Tracing: Cloud Trace")
         else:
             print("   - Tracing: Disabled")
 
@@ -143,8 +148,8 @@ class EvaluationWrapper:
                 output_data = self._extract_output(response)
                 metadata = self._extract_metadata(response)
 
-                # Log interaction
-                if self.config.logging.include_trajectories:
+                # Log interaction (if enabled)
+                if self.logger and self.config.logging.include_trajectories:
                     self.logger.log_interaction(
                         interaction_id=interaction_id,
                         input_data=input_data,
@@ -177,17 +182,18 @@ class EvaluationWrapper:
                 return response
 
             except Exception as e:
-                # Log error
+                # Log error (if enabled)
                 duration_ms = (time.time() - start_time) * 1000
 
-                self.logger.log_error(
-                    interaction_id=interaction_id,
-                    error=e,
-                    context={
-                        "input": str(input_data)[:500],  # Truncate for logging
-                        "duration_ms": duration_ms,
-                    },
-                )
+                if self.logger:
+                    self.logger.log_error(
+                        interaction_id=interaction_id,
+                        error=e,
+                        context={
+                            "input": str(input_data)[:500],  # Truncate for logging
+                            "duration_ms": duration_ms,
+                        },
+                    )
 
                 # Record error metric (if enabled)
                 if self.metrics:
