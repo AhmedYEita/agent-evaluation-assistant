@@ -54,6 +54,9 @@ Issues = "https://github.com/yourusername/agent-evaluation-agent/issues"
 where = ["."]
 include = ["agent_evaluation_sdk*"]
 
+[tool.setuptools.package-data]
+agent_evaluation_sdk = ["templates/*.yaml"]
+
 [tool.black]
 line-length = 100
 target-version = ['py312']

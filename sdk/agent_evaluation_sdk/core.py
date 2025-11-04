@@ -38,34 +38,52 @@ class EvaluationWrapper:
             log_level=config.logging.level,
         )
 
-        self.tracer = CloudTracer(
-            project_id=config.project_id,
-            agent_name=config.agent_name,
-            sample_rate=config.tracing.sample_rate,
-        )
+        # Initialize tracer only if enabled
+        self.tracer = None
+        if config.tracing.enabled:
+            self.tracer = CloudTracer(
+                project_id=config.project_id,
+                agent_name=config.agent_name,
+                sample_rate=config.tracing.sample_rate,
+            )
 
-        self.metrics = CloudMetrics(
-            project_id=config.project_id,
-            agent_name=config.agent_name,
-        )
+        # Initialize metrics only if enabled
+        self.metrics = None
+        if config.metrics.enabled:
+            self.metrics = CloudMetrics(
+                project_id=config.project_id,
+                agent_name=config.agent_name,
+            )
 
-        self.dataset_collector = DatasetCollector(
-            project_id=config.project_id,
-            agent_name=config.agent_name,
-            storage_location=config.dataset.storage_location,
-        )
+        # Initialize dataset collector only if auto_collect is enabled
+        self.dataset_collector = None
+        if config.dataset.auto_collect:
+            self.dataset_collector = DatasetCollector(
+                project_id=config.project_id,
+                agent_name=config.agent_name,
+                storage_location=config.dataset.storage_location,
+            )
 
         # Wrap agent methods
         self._wrap_agent()
 
         print(f"✅ Evaluation enabled for agent: {config.agent_name}")
         print("   - Logging: Cloud Logging")
-        print(f"   - Tracing: Cloud Trace (sample rate: {config.tracing.sample_rate})")
-        print("   - Metrics: Cloud Monitoring")
+
+        if config.tracing.enabled:
+            print(f"   - Tracing: Cloud Trace (sample rate: {config.tracing.sample_rate})")
+        else:
+            print("   - Tracing: Disabled")
+
+        if config.metrics.enabled:
+            print("   - Metrics: Cloud Monitoring")
+        else:
+            print("   - Metrics: Disabled")
+
         if config.dataset.auto_collect:
             print("   - Dataset: Enabled (collecting all interactions)")
         else:
-            print("   - Dataset: Disabled (opt-in via config)")
+            print("   - Dataset: Disabled")
 
     def _wrap_agent(self) -> None:
         """Wrap agent methods with evaluation instrumentation."""
@@ -94,42 +112,49 @@ class EvaluationWrapper:
             # Generate interaction ID
             interaction_id = str(uuid.uuid4())
 
-            # Start trace
-            trace_id = self.tracer.start_trace()
+            # Start trace (if enabled)
+            trace_id = None
+            if self.tracer:
+                trace_id = self.tracer.start_trace()
 
             # Extract input
             input_data = args[0] if args else kwargs.get("prompt", kwargs.get("input", ""))
 
             try:
-                # Execute with tracing
-                with self.tracer.span(
-                    name="agent.generate_content",
-                    attributes={"interaction_id": interaction_id},
-                    trace_id=trace_id,
-                ):
-                    start_time = time.time()
+                # Execute with tracing (if enabled)
+                start_time = time.time()
 
-                    # Call original method
+                if self.tracer:
+                    with self.tracer.span(
+                        name="agent.generate_content",
+                        attributes={"interaction_id": interaction_id},
+                        trace_id=trace_id,
+                    ):
+                        # Call original method
+                        response = original_method(*args, **kwargs)
+                else:
+                    # Call without tracing
                     response = original_method(*args, **kwargs)
 
-                    # Calculate duration
-                    duration_ms = (time.time() - start_time) * 1000
+                # Calculate duration
+                duration_ms = (time.time() - start_time) * 1000
 
-                    # Extract output and metadata
-                    output_data = self._extract_output(response)
-                    metadata = self._extract_metadata(response)
+                # Extract output and metadata
+                output_data = self._extract_output(response)
+                metadata = self._extract_metadata(response)
 
-                    # Log interaction
-                    if self.config.logging.include_trajectories:
-                        self.logger.log_interaction(
-                            interaction_id=interaction_id,
-                            input_data=input_data,
-                            output_data=output_data,
-                            duration_ms=duration_ms,
-                            metadata=metadata,
-                        )
+                # Log interaction
+                if self.config.logging.include_trajectories:
+                    self.logger.log_interaction(
+                        interaction_id=interaction_id,
+                        input_data=input_data,
+                        output_data=output_data,
+                        duration_ms=duration_ms,
+                        metadata=metadata,
+                    )
 
-                    # Record metrics
+                # Record metrics (if enabled)
+                if self.metrics:
                     self.metrics.record_latency(duration_ms)
                     self.metrics.record_success()
 
@@ -140,16 +165,16 @@ class EvaluationWrapper:
                             output_tokens=metadata["output_tokens"],
                         )
 
-                    # Collect for dataset
-                    if self.config.dataset.auto_collect:
-                        self.dataset_collector.add_interaction(
-                            interaction_id=interaction_id,
-                            input_data=input_data,
-                            output_data=output_data,
-                            metadata=metadata,
-                        )
+                # Collect for dataset (if enabled)
+                if self.dataset_collector:
+                    self.dataset_collector.add_interaction(
+                        interaction_id=interaction_id,
+                        input_data=input_data,
+                        output_data=output_data,
+                        metadata=metadata,
+                    )
 
-                    return response
+                return response
 
             except Exception as e:
                 # Log error
@@ -164,10 +189,11 @@ class EvaluationWrapper:
                     },
                 )
 
-                # Record error metric
-                self.metrics.record_error(
-                    error_type=type(e).__name__,
-                )
+                # Record error metric (if enabled)
+                if self.metrics:
+                    self.metrics.record_error(
+                        error_type=type(e).__name__,
+                    )
 
                 # Re-raise the exception
                 raise
@@ -251,7 +277,8 @@ class EvaluationWrapper:
 
     def flush(self) -> None:
         """Flush any buffered data (e.g., dataset samples)."""
-        self.dataset_collector.flush()
+        if self.dataset_collector:
+            self.dataset_collector.flush()
 
     def __del__(self):
         """Cleanup when wrapper is destroyed."""

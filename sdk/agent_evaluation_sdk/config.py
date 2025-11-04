@@ -15,7 +15,6 @@ class LoggingConfig:
 
     level: str = "INFO"
     include_trajectories: bool = True
-    include_metadata: bool = True
 
 
 @dataclass
@@ -31,7 +30,6 @@ class MetricsConfig:
     """Configuration for Cloud Monitoring."""
 
     enabled: bool = True
-    custom_metrics: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -40,7 +38,6 @@ class DatasetConfig:
 
     auto_collect: bool = False  # Opt-in only
     storage_location: Optional[str] = None  # BigQuery table or GCS bucket
-    table_name: Optional[str] = None  # Custom table name (defaults to {agent_name}_eval_dataset)
 
 
 @dataclass

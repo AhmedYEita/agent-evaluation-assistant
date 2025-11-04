@@ -79,7 +79,6 @@ class TestSubConfigs:
         
         assert config.level == "INFO"
         assert config.include_trajectories is True
-        assert config.include_metadata is True
     
     def test_tracing_config_defaults(self):
         """Test TracingConfig default values."""
@@ -93,7 +92,6 @@ class TestSubConfigs:
         config = MetricsConfig()
         
         assert config.enabled is True
-        assert config.custom_metrics == []
     
     def test_dataset_config_defaults(self):
         """Test DatasetConfig default values."""

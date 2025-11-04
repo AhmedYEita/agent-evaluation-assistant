@@ -33,7 +33,8 @@ class TestEvaluationWrapper:
         mock_logger.assert_called_once()
         mock_tracer.assert_called_once()
         mock_metrics.assert_called_once()
-        mock_dataset.assert_called_once()
+        # DatasetCollector should NOT be called when auto_collect is False (default)
+        mock_dataset.assert_not_called()
     
     @patch('agent_evaluation_sdk.core.CloudLogger')
     @patch('agent_evaluation_sdk.core.CloudTracer')
