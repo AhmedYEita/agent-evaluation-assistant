@@ -69,7 +69,7 @@ class EvaluationWrapper:
         self._wrap_agent()
 
         print(f"✅ Evaluation enabled for agent: {config.agent_name}")
-        
+
         if config.logging.enabled:
             print("   - Logging: Cloud Logging")
         else:
