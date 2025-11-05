@@ -1,12 +1,9 @@
 """
-Simple ADK Agent with Evaluation
-
-This example demonstrates how easy it is to add comprehensive evaluation
-to an ADK agent with just a few lines of code.
+Simple ADK Agent with Evaluation integration.
 """
 
-from pathlib import Path
 from google.genai.adk import Agent
+from pathlib import Path
 
 # Import the evaluation SDK
 from agent_evaluation_sdk import enable_evaluation

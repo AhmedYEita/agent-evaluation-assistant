@@ -1,10 +1,7 @@
 """
 Evaluation Testing Script
 
-This script runs your agent against the testing dataset and evaluates performance.
-
-Usage:
-    python run_evaluation.py
+Runs the agent against the testing dataset and evaluates performance.
 """
 
 import sys

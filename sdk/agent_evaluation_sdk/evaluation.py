@@ -2,7 +2,7 @@
 Gen AI Evaluation Service integration.
 """
 
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Dict, List, Optional
 
 from google.cloud import aiplatform
 
@@ -37,14 +37,12 @@ class GenAIEvaluator:
         criteria: Optional[List[str]] = None,
         thresholds: Optional[Dict[str, float]] = None,
     ) -> Dict[str, Any]:
-        """Internal evaluation logic.
-
-        Expects dataset with: instruction, reference, response fields.
+        """Run evaluation on dataset using specified metrics and criteria.
 
         Args:
             dataset: List of test cases with instruction, reference, response
             metrics: List of metrics to compute (e.g., ["bleu", "rouge"])
-            criteria: List of criteria for pointwise evaluation
+            criteria: List of criteria for model-based evaluation
             thresholds: Optional dict of minimum scores for pass/fail (0-1 scale)
 
         Returns:
@@ -84,165 +82,134 @@ class GenAIEvaluator:
             "criteria_scores": {},
         }
 
-        # Calculate BLEU if requested
-        if "bleu" in metrics:
-            bleu_scores = self._calculate_bleu(dataset)
-            # Add pass rate if threshold is defined
-            if "bleu" in thresholds and bleu_scores.get("score"):
-                score_value = cast(float, bleu_scores["score"])
-                pass_rate_value = 1.0 if score_value >= thresholds["bleu"] else 0.0
-                bleu_scores = {**bleu_scores, "pass_rate": pass_rate_value}
-            cast(Dict[str, Any], results["metrics"])["bleu"] = bleu_scores
+        # Calculate automated metrics
+        for metric in metrics:
+            metric_result = self._calculate_metric(dataset, metric)
+            if "error" not in metric_result and metric in thresholds:
+                metric_result = self._add_pass_rate(metric_result, thresholds[metric], metric)
+            results["metrics"][metric] = metric_result
 
-        # Calculate ROUGE if requested
-        if "rouge" in metrics:
-            rouge_scores = self._calculate_rouge(dataset)
-            # Add pass rate if threshold is defined (uses rougeL as primary metric)
-            if "rouge" in thresholds and rouge_scores.get("rougeL"):
-                rougel_value = cast(float, rouge_scores["rougeL"])
-                pass_rate_value = 1.0 if rougel_value >= thresholds["rouge"] else 0.0
-                rouge_scores = {**rouge_scores, "pass_rate": pass_rate_value}
-            cast(Dict[str, Any], results["metrics"])["rouge"] = rouge_scores
-
-        # Run pointwise evaluation for criteria
+        # Run model-based criteria evaluation
         if criteria:
-            criteria_results = self._evaluate_criteria(dataset, criteria, thresholds)
-            results["criteria_scores"] = criteria_results
+            results["criteria_scores"] = self._evaluate_criteria(dataset, criteria, thresholds)
 
         return results
 
-    def _calculate_bleu(self, dataset: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Calculate BLEU scores using Vertex AI Evaluation.
+    def _calculate_metric(self, dataset: List[Dict[str, Any]], metric_name: str) -> Dict[str, Any]:
+        """Calculate automated metric using Vertex AI Evaluation.
 
         Args:
             dataset: List of test cases with 'reference' and 'response' fields
+            metric_name: Metric to calculate (e.g., "bleu", "rouge")
 
         Returns:
-            Dictionary with BLEU scores
+            Dictionary with metric scores
         """
-        print("   Computing BLEU scores...")
+        print(f"   Computing {metric_name.upper()} scores...")
 
         try:
             from vertexai.preview.evaluation import EvalTask
 
             # Prepare evaluation dataset
-            eval_dataset = []
-            for item in dataset:
-                eval_dataset.append(
-                    {
-                        "reference": item.get("reference", ""),
-                        "prediction": item.get("response", ""),
-                    }
-                )
-
-            # Create evaluation task
-            eval_task = EvalTask(
-                dataset=eval_dataset,
-                metrics=["bleu"],
-            )
+            eval_dataset = [
+                {
+                    "reference": item.get("reference", ""),
+                    "prediction": item.get("response", ""),
+                }
+                for item in dataset
+            ]
 
             # Run evaluation
+            eval_task = EvalTask(dataset=eval_dataset, metrics=[metric_name])  # type: ignore[arg-type,list-item]
             result = eval_task.evaluate()
 
-            # Extract BLEU score from results
-            # Vertex AI returns a DataFrame-like structure
+            # Extract scores
+            return self._extract_metric_scores(result, metric_name, len(dataset))
+
+        except ImportError:
+            print("   ⚠️  vertexai.preview.evaluation not available")
+            return self._error_response(
+                "Vertex AI Evaluation SDK not installed", len(dataset), metric_name
+            )
+        except Exception as e:
+            print(f"   ⚠️  {metric_name.upper()} calculation failed: {e}")
+            return self._error_response(str(e), len(dataset), metric_name)
+
+    def _extract_metric_scores(self, result: Any, metric_name: str, count: int) -> Dict[str, Any]:
+        """Extract scores from Vertex AI evaluation result.
+
+        Args:
+            result: Vertex AI evaluation result object
+            metric_name: Name of the metric
+            count: Number of test cases
+
+        Returns:
+            Dictionary with extracted scores
+        """
+        if metric_name == "bleu":
+            score = 0.0
             if hasattr(result, "summary_metrics") and result.summary_metrics:
-                bleu_score = result.summary_metrics.get("bleu/mean", 0.0)
+                score = result.summary_metrics.get("bleu/mean", 0.0)
             elif hasattr(result, "metrics_table") and result.metrics_table:
-                # Fallback: calculate from row metrics
-                bleu_scores_list = [
+                scores_list = [
                     row.get("bleu", 0.0) for row in result.metrics_table if "bleu" in row
                 ]
-                bleu_score = (
-                    sum(bleu_scores_list) / len(bleu_scores_list) if bleu_scores_list else 0.0
-                )
-            else:
-                bleu_score = 0.0
+                score = sum(scores_list) / len(scores_list) if scores_list else 0.0
+            return {"score": round(score, 4), "count": count}
 
-            return {
-                "score": round(bleu_score, 4),
-                "count": len(dataset),
-            }
+        elif metric_name == "rouge":
+            if hasattr(result, "summary_metrics") and result.summary_metrics:
+                return {
+                    "rougeL": round(result.summary_metrics.get("rougeL/mean", 0.0), 4),
+                    "rouge1": round(result.summary_metrics.get("rouge1/mean", 0.0), 4),
+                    "rouge2": round(result.summary_metrics.get("rouge2/mean", 0.0), 4),
+                    "count": count,
+                }
+            return {"rougeL": 0.0, "rouge1": 0.0, "rouge2": 0.0, "count": count}
 
-        except ImportError:
-            print("   ⚠️  vertexai.preview.evaluation not available")
-            return {
-                "score": 0.0,
-                "count": len(dataset),
-                "error": "Vertex AI Evaluation SDK not installed",
-            }
-        except Exception as e:
-            print(f"   ⚠️  BLEU calculation failed: {e}")
-            return {
-                "score": 0.0,
-                "count": len(dataset),
-                "error": str(e),
-            }
+        return {"score": 0.0, "count": count}
 
-    def _calculate_rouge(self, dataset: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Calculate ROUGE scores using Vertex AI Evaluation.
+    def _error_response(self, error_msg: str, count: int, metric_name: str = "") -> Dict[str, Any]:
+        """Create error response dictionary.
 
         Args:
-            dataset: List of test cases with 'reference' and 'response' fields
+            error_msg: Error message
+            count: Number of test cases
+            metric_name: Optional metric name for specific formatting
 
         Returns:
-            Dictionary with ROUGE scores (rouge1, rouge2, rougeL)
+            Error response dictionary
         """
-        print("   Computing ROUGE scores...")
-
-        try:
-            from vertexai.preview.evaluation import EvalTask
-
-            # Prepare evaluation dataset
-            eval_dataset = []
-            for item in dataset:
-                eval_dataset.append(
-                    {
-                        "reference": item.get("reference", ""),
-                        "prediction": item.get("response", ""),
-                    }
-                )
-
-            # Create evaluation task
-            eval_task = EvalTask(
-                dataset=eval_dataset,
-                metrics=cast(Any, ["rouge"]),
-            )
-
-            # Run evaluation
-            result = eval_task.evaluate()
-
-            # Extract ROUGE scores
-            rouge_results = {}
-            if hasattr(result, "summary_metrics"):
-                rouge_results["rougeL"] = round(result.summary_metrics.get("rougeL/mean", 0.0), 4)
-                rouge_results["rouge1"] = round(result.summary_metrics.get("rouge1/mean", 0.0), 4)
-                rouge_results["rouge2"] = round(result.summary_metrics.get("rouge2/mean", 0.0), 4)
-            else:
-                # Fallback: default values
-                rouge_results = {"rougeL": 0.0, "rouge1": 0.0, "rouge2": 0.0}
-
-            rouge_results["count"] = len(dataset)
-            return rouge_results
-
-        except ImportError:
-            print("   ⚠️  vertexai.preview.evaluation not available")
+        if metric_name == "rouge":
             return {
                 "rougeL": 0.0,
                 "rouge1": 0.0,
                 "rouge2": 0.0,
-                "count": len(dataset),
-                "error": "Vertex AI Evaluation SDK not installed",
+                "count": count,
+                "error": error_msg,
             }
-        except Exception as e:
-            print(f"   ⚠️  ROUGE calculation failed: {e}")
-            return {
-                "rougeL": 0.0,
-                "rouge1": 0.0,
-                "rouge2": 0.0,
-                "count": len(dataset),
-                "error": str(e),
-            }
+        return {"score": 0.0, "count": count, "error": error_msg}
+
+    def _add_pass_rate(
+        self, metric_result: Dict[str, Any], threshold: float, metric_name: str
+    ) -> Dict[str, Any]:
+        """Add pass rate to metric result based on threshold.
+
+        Args:
+            metric_result: Metric result dictionary
+            threshold: Threshold value for pass/fail
+            metric_name: Name of the metric
+
+        Returns:
+            Updated metric result with pass_rate
+        """
+        if metric_name == "rouge":
+            score = metric_result.get("rougeL", 0.0)
+        else:
+            score = metric_result.get("score", 0.0)
+
+        pass_rate = 1.0 if score >= threshold else 0.0
+        return {**metric_result, "pass_rate": pass_rate}
 
     def _evaluate_criteria(
         self,
@@ -250,7 +217,7 @@ class GenAIEvaluator:
         criteria: List[str],
         thresholds: Optional[Dict[str, float]] = None,
     ) -> Dict[str, Dict[str, Any]]:
-        """Evaluate dataset against criteria using model-based evaluation.
+        """Evaluate dataset using model-based criteria.
 
         Args:
             dataset: List of test cases with instruction, reference, response
@@ -260,119 +227,11 @@ class GenAIEvaluator:
         Returns:
             Dictionary mapping criterion name to evaluation results
         """
-        if thresholds is None:
-            thresholds = {}
-
+        thresholds = thresholds or {}
         print(f"   Evaluating {len(criteria)} criteria using {self.model_name}...")
 
         try:
-            from vertexai.preview.evaluation import EvalTask
-
-            # Prepare evaluation dataset
-            eval_dataset = []
-            for item in dataset:
-                eval_dataset.append(
-                    {
-                        "prompt": item.get("instruction", ""),
-                        "context": item.get("context", ""),
-                        "reference": item.get("reference", ""),
-                        "response": item.get("response", ""),
-                    }
-                )
-
-            # Map criteria to Vertex AI metric names
-            valid_criteria = {
-                "coherence",
-                "fluency",
-                "safety",
-                "groundedness",
-                "fulfillment",
-                "instruction_following",
-                "verbosity",
-            }
-
-            results = {}
-
-            for criterion in criteria:
-                if criterion not in valid_criteria:
-                    print(f"   ⚠️  Unknown criterion: {criterion}")
-                    results[criterion] = {
-                        "score": 0.0,
-                        "count": len(dataset),
-                        "error": f"Unknown criterion: {criterion}",
-                    }
-                    continue
-
-                try:
-                    # Create evaluation task for this criterion
-                    eval_task = EvalTask(
-                        dataset=eval_dataset,
-                        metrics=cast(Any, [criterion]),
-                    )
-
-                    # Run evaluation
-                    result = eval_task.evaluate(model=cast(Any, self.model_name))
-
-                    # Extract score (Vertex AI typically returns 1-5 scale)
-                    raw_score = 0.0
-                    if hasattr(result, "summary_metrics") and result.summary_metrics:
-                        raw_score = result.summary_metrics.get(f"{criterion}/mean", 0.0)
-                    elif hasattr(result, "metrics_table") and result.metrics_table:
-                        # Fallback: calculate from row metrics
-                        scores_list = [
-                            row.get(criterion, 0.0)
-                            for row in result.metrics_table
-                            if criterion in row
-                        ]
-                        raw_score = sum(scores_list) / len(scores_list) if scores_list else 0.0
-
-                    # Normalize to 0-1 scale if needed (Vertex AI uses 1-5)
-                    normalized_score = raw_score / 5.0 if raw_score > 1.0 else raw_score
-
-                    result_dict: Dict[str, Any] = {
-                        "score": round(normalized_score, 4),
-                        "count": len(dataset),
-                    }
-
-                    # Calculate pass rate if threshold is defined
-                    if criterion in thresholds:
-                        # For per-sample scores, calculate actual pass rate
-                        if hasattr(result, "metrics_table") and result.metrics_table:
-                            per_sample_scores = [
-                                (
-                                    row.get(criterion, 0.0) / 5.0
-                                    if row.get(criterion, 0.0) > 1.0
-                                    else row.get(criterion, 0.0)
-                                )
-                                for row in result.metrics_table
-                                if criterion in row
-                            ]
-                            if per_sample_scores:
-                                passed = sum(
-                                    1 for s in per_sample_scores if s >= thresholds[criterion]
-                                )
-                                result_dict["pass_rate"] = round(passed / len(per_sample_scores), 4)
-                        else:
-                            # Fallback: binary pass/fail based on average
-                            result_dict["pass_rate"] = (
-                                1.0 if normalized_score >= thresholds[criterion] else 0.0
-                            )
-
-                    results[criterion] = result_dict
-
-                    status = "✓" if normalized_score >= thresholds.get(criterion, 0.0) else "✗"
-                    print(f"     {status} {criterion}: {normalized_score:.4f}")
-
-                except Exception as e:
-                    print(f"   ⚠️  {criterion} evaluation failed: {e}")
-                    results[criterion] = {
-                        "score": 0.0,
-                        "count": len(dataset),
-                        "error": str(e),
-                    }
-
-            return results
-
+            from vertexai.preview.evaluation import EvalTask  # noqa: F401
         except ImportError:
             print("   ⚠️  vertexai.preview.evaluation not available")
             return {
@@ -383,15 +242,138 @@ class GenAIEvaluator:
                 }
                 for criterion in criteria
             }
-        except Exception as e:
-            print(f"   ⚠️  Criteria evaluation failed: {e}")
-            return {
-                criterion: {
+
+        # Prepare evaluation dataset
+        eval_dataset = [
+            {
+                "prompt": item.get("instruction", ""),
+                "context": item.get("context", ""),
+                "reference": item.get("reference", ""),
+                "response": item.get("response", ""),
+            }
+            for item in dataset
+        ]
+
+        valid_criteria = {
+            "coherence",
+            "fluency",
+            "safety",
+            "groundedness",
+            "fulfillment",
+            "instruction_following",
+            "verbosity",
+        }
+
+        results = {}
+        for criterion in criteria:
+            if criterion not in valid_criteria:
+                print(f"   ⚠️  Unknown criterion: {criterion}")
+                results[criterion] = {
                     "score": 0.0,
                     "count": len(dataset),
-                    "error": str(e),
+                    "error": f"Unknown criterion: {criterion}",
                 }
-                for criterion in criteria
+                continue
+
+            results[criterion] = self._evaluate_single_criterion(
+                eval_dataset, criterion, len(dataset), thresholds.get(criterion)
+            )
+
+        return results
+
+    def _evaluate_single_criterion(
+        self,
+        eval_dataset: List[Dict[str, Any]],
+        criterion: str,
+        count: int,
+        threshold: Optional[float] = None,
+    ) -> Dict[str, Any]:
+        """Evaluate a single criterion using Vertex AI.
+
+        Args:
+            eval_dataset: Prepared evaluation dataset
+            criterion: Criterion name to evaluate
+            count: Number of test cases
+            threshold: Optional threshold for pass/fail
+
+        Returns:
+            Evaluation result dictionary
+        """
+        try:
+            from vertexai.preview.evaluation import EvalTask
+
+            eval_task = EvalTask(dataset=eval_dataset, metrics=[criterion])  # type: ignore[arg-type,list-item]
+            result = eval_task.evaluate(model=self.model_name)  # type: ignore[arg-type]
+
+            # Extract and normalize score (Vertex AI uses 1-5 scale)
+            raw_score = self._extract_raw_score(result, criterion)
+            normalized_score = raw_score / 5.0 if raw_score > 1.0 else raw_score
+
+            result_dict: Dict[str, Any] = {
+                "score": round(normalized_score, 4),
+                "count": count,
             }
 
-    # Note: export_results() removed - results are saved to BigQuery by RegressionTester
+            # Add pass rate if threshold is defined
+            if threshold is not None:
+                result_dict["pass_rate"] = self._calculate_pass_rate(result, criterion, threshold)
+
+            status = "✓" if normalized_score >= (threshold or 0.0) else "✗"
+            print(f"     {status} {criterion}: {normalized_score:.4f}")
+
+            return result_dict
+
+        except Exception as e:
+            print(f"   ⚠️  {criterion} evaluation failed: {e}")
+            return {"score": 0.0, "count": count, "error": str(e)}
+
+    def _extract_raw_score(self, result: Any, criterion: str) -> float:
+        """Extract raw score from Vertex AI result.
+
+        Args:
+            result: Vertex AI evaluation result
+            criterion: Criterion name
+
+        Returns:
+            Raw score value
+        """
+        if hasattr(result, "summary_metrics") and result.summary_metrics:
+            return float(result.summary_metrics.get(f"{criterion}/mean", 0.0))
+
+        if hasattr(result, "metrics_table") and result.metrics_table:
+            scores_list = [
+                row.get(criterion, 0.0) for row in result.metrics_table if criterion in row
+            ]
+            return sum(scores_list) / len(scores_list) if scores_list else 0.0
+
+        return 0.0
+
+    def _calculate_pass_rate(self, result: Any, criterion: str, threshold: float) -> float:
+        """Calculate pass rate based on threshold.
+
+        Args:
+            result: Vertex AI evaluation result
+            criterion: Criterion name
+            threshold: Threshold value
+
+        Returns:
+            Pass rate (0.0 to 1.0)
+        """
+        if hasattr(result, "metrics_table") and result.metrics_table:
+            per_sample_scores = [
+                (
+                    row.get(criterion, 0.0) / 5.0
+                    if row.get(criterion, 0.0) > 1.0
+                    else row.get(criterion, 0.0)
+                )
+                for row in result.metrics_table
+                if criterion in row
+            ]
+            if per_sample_scores:
+                passed = sum(1 for s in per_sample_scores if s >= threshold)
+                return round(passed / len(per_sample_scores), 4)
+
+        # Fallback: binary pass/fail based on average
+        raw_score = self._extract_raw_score(result, criterion)
+        normalized_score = raw_score / 5.0 if raw_score > 1.0 else raw_score
+        return 1.0 if normalized_score >= threshold else 0.0

@@ -1,8 +1,7 @@
 """
-Core evaluation wrapper for AI agents.
+Core evaluation wrapper for Google ADK agents.
 
-This module provides the main integration point for enabling evaluation
-on ADK agents with automatic instrumentation.
+Provides automatic instrumentation for logging, tracing, metrics, and dataset collection.
 """
 
 import functools
@@ -71,84 +70,71 @@ class EvaluationWrapper:
         print(f"✅ Evaluation enabled for agent: {config.agent_name}")
 
         if config.logging.enabled:
-            print("   - Logging: Cloud Logging")
+            print("   - Logging: Cloud Logging initialized")
         else:
             print("   - Logging: Disabled")
 
         if config.tracing.enabled:
-            print("   - Tracing: Cloud Trace")
+            print("   - Tracing: Cloud Trace initialized")
         else:
             print("   - Tracing: Disabled")
 
         if config.metrics.enabled:
-            print("   - Metrics: Cloud Monitoring")
+            print("   - Metrics: Cloud Monitoring initialized")
         else:
             print("   - Metrics: Disabled")
 
         if config.dataset.auto_collect:
-            print("   - Dataset: Enabled (collecting all interactions)")
+            print("   - Dataset Collection: Enabled")
         else:
-            print("   - Dataset: Disabled")
+            print("   - Dataset Collection: Disabled")
 
     def _wrap_agent(self) -> None:
-        """Wrap agent methods with evaluation instrumentation."""
-        # Store original method
-        if hasattr(self.agent, "generate_content"):
-            original_method = self.agent.generate_content
-            self.agent.generate_content = self._wrap_generate_content(original_method)
-        elif hasattr(self.agent, "__call__"):
-            original_method = self.agent.__call__
-            self.agent.__call__ = self._wrap_generate_content(original_method)
-        else:
-            print("Warning: Could not find generate_content or __call__ method to wrap")
+        """Replace the ADK agent's generate_content method with the evaluation wrapped version."""
+        if not hasattr(self.agent, "generate_content"):
+            raise ValueError(
+                "Agent must have a 'generate_content' method. "
+                "This SDK currently supports Google ADK agents only."
+            )
+
+        original_method = self.agent.generate_content
+        self.agent.generate_content = self._wrap_generate_content(original_method)
 
     def _wrap_generate_content(self, original_method: Callable) -> Callable:
-        """Wrap the agent's generate_content method.
+        """Wrap the original method with logging, tracing, metrics, and dataset collection.
 
         Args:
-            original_method: The original method to wrap
+            original_method: The original agent method to wrap
 
         Returns:
-            Wrapped method with evaluation instrumentation
+            Wrapped method that adds logging, tracing, metrics, and dataset collection
         """
 
         @functools.wraps(original_method)
         def wrapped(*args, **kwargs):
-            # Generate interaction ID
             interaction_id = str(uuid.uuid4())
-
-            # Start trace (if enabled)
-            trace_id = None
-            if self.tracer:
-                trace_id = self.tracer.start_trace()
-
-            # Extract input
             input_data = args[0] if args else kwargs.get("prompt", kwargs.get("input", ""))
+            start_time = time.time()
 
+            # Start trace and execute agent
             try:
-                # Execute with tracing (if enabled)
-                start_time = time.time()
-
                 if self.tracer:
+                    trace_id = self.tracer.start_trace()
                     with self.tracer.span(
                         name="agent.generate_content",
                         attributes={"interaction_id": interaction_id},
                         trace_id=trace_id,
                     ):
-                        # Call original method
                         response = original_method(*args, **kwargs)
                 else:
-                    # Call without tracing
                     response = original_method(*args, **kwargs)
 
-                # Calculate duration
+                # Extract response data
                 duration_ms = (time.time() - start_time) * 1000
-
-                # Extract output and metadata
                 output_data = self._extract_output(response)
                 metadata = self._extract_metadata(response)
 
-                # Log interaction (if enabled)
+                # Log successful interaction
                 if self.logger and self.config.logging.include_trajectories:
                     self.logger.log_interaction(
                         interaction_id=interaction_id,
@@ -158,19 +144,17 @@ class EvaluationWrapper:
                         metadata=metadata,
                     )
 
-                # Record metrics (if enabled)
+                # Record success metrics
                 if self.metrics:
                     self.metrics.record_latency(duration_ms)
                     self.metrics.record_success()
-
-                    # Extract and record token counts if available
                     if metadata.get("input_tokens") and metadata.get("output_tokens"):
                         self.metrics.record_token_count(
                             input_tokens=metadata["input_tokens"],
                             output_tokens=metadata["output_tokens"],
                         )
 
-                # Collect for dataset (if enabled)
+                # Collect for test dataset
                 if self.dataset_collector:
                     self.dataset_collector.add_interaction(
                         interaction_id=interaction_id,
@@ -182,7 +166,7 @@ class EvaluationWrapper:
                 return response
 
             except Exception as e:
-                # Log error (if enabled)
+                # Log and record error, then re-raise
                 duration_ms = (time.time() - start_time) * 1000
 
                 if self.logger:
@@ -190,18 +174,14 @@ class EvaluationWrapper:
                         interaction_id=interaction_id,
                         error=e,
                         context={
-                            "input": str(input_data)[:500],  # Truncate for logging
+                            "input": str(input_data)[:500],
                             "duration_ms": duration_ms,
                         },
                     )
 
-                # Record error metric (if enabled)
                 if self.metrics:
-                    self.metrics.record_error(
-                        error_type=type(e).__name__,
-                    )
+                    self.metrics.record_error(error_type=type(e).__name__)
 
-                # Re-raise the exception
                 raise
 
         return wrapped
@@ -242,44 +222,23 @@ class EvaluationWrapper:
             response: Agent response object
 
         Returns:
-            Dictionary of metadata
+            Dictionary of metadata (token counts, model info)
         """
         metadata = {}
 
-        # Try to extract token usage
+        # Extract token usage (Gemini/ADK response format)
         if hasattr(response, "usage_metadata"):
             usage = response.usage_metadata
-            if hasattr(usage, "prompt_token_count"):
-                metadata["input_tokens"] = usage.prompt_token_count
-            if hasattr(usage, "candidates_token_count"):
-                metadata["output_tokens"] = usage.candidates_token_count
-            if hasattr(usage, "total_token_count"):
-                metadata["total_tokens"] = usage.total_token_count
+            metadata["input_tokens"] = getattr(usage, "prompt_token_count", None)
+            metadata["output_tokens"] = getattr(usage, "candidates_token_count", None)
+            metadata["total_tokens"] = getattr(usage, "total_token_count", None)
 
-        # Try to extract model info
+        # Extract model name
         if hasattr(response, "model"):
             metadata["model"] = response.model
 
-        # Try to extract safety ratings
-        if hasattr(response, "candidates"):
-            if response.candidates and hasattr(response.candidates[0], "safety_ratings"):
-                metadata["safety_ratings"] = [
-                    {
-                        "category": (
-                            rating.category.name
-                            if hasattr(rating.category, "name")
-                            else str(rating.category)
-                        ),
-                        "probability": (
-                            rating.probability.name
-                            if hasattr(rating.probability, "name")
-                            else str(rating.probability)
-                        ),
-                    }
-                    for rating in response.candidates[0].safety_ratings
-                ]
-
-        return metadata
+        # Remove None values
+        return {k: v for k, v in metadata.items() if v is not None}
 
     def flush(self) -> None:
         """Flush any buffered data (e.g., dataset samples)."""
@@ -302,8 +261,6 @@ def enable_evaluation(
 ) -> EvaluationWrapper:
     """Enable evaluation for an ADK agent with a single function call.
 
-    This is the main entry point for integrating evaluation into your agent.
-
     Args:
         agent: The ADK agent instance to enable evaluation for
         project_id: GCP project ID
@@ -312,26 +269,6 @@ def enable_evaluation(
 
     Returns:
         EvaluationWrapper instance (you can ignore this in most cases)
-
-    Example:
-        ```python
-        from google.genai.adk import Agent
-        from agent_evaluation_sdk import enable_evaluation
-
-        agent = Agent(
-            model="gemini-2.0-flash-exp",
-            system_instruction="You are a helpful assistant",
-        )
-
-        enable_evaluation(
-            agent=agent,
-            project_id="my-gcp-project",
-            agent_name="customer-support-agent"
-        )
-
-        # Now use your agent normally - evaluation happens automatically!
-        response = agent.generate_content("Hello!")
-        ```
     """
     # Load config
     if config_path:

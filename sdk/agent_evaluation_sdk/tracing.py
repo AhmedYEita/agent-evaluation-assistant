@@ -8,7 +8,8 @@ from contextlib import contextmanager
 from typing import Any, Dict, Optional
 
 from google.cloud.trace_v2 import TraceServiceClient
-from google.cloud.trace_v2.types import Span, TruncatableString
+from google.cloud.trace_v2.types import AttributeValue, Span, TruncatableString
+from google.protobuf.timestamp_pb2 import Timestamp
 
 
 class CloudTracer:
@@ -23,67 +24,37 @@ class CloudTracer:
         """
         self.project_id = project_id
         self.agent_name = agent_name
-
-        # Initialize Cloud Trace client
         self.client = TraceServiceClient()
         self.project_name = f"projects/{project_id}"
 
-        # Current trace context
-        self.current_trace_id: Optional[str] = None
-        self.current_span_id: Optional[str] = None
-
-    def start_trace(self, trace_id: Optional[str] = None) -> str:
-        """Start a new trace.
-
-        Args:
-            trace_id: Optional trace ID (generated if not provided)
-
-        Returns:
-            The trace ID
-        """
-        self.current_trace_id = trace_id or self._generate_trace_id()
-        return self.current_trace_id
+    def start_trace(self) -> str:
+        """Generate and return a new trace ID."""
+        return uuid.uuid4().hex
 
     @contextmanager
     def span(
-        self,
-        name: str,
-        attributes: Optional[Dict[str, Any]] = None,
-        trace_id: Optional[str] = None,
+        self, name: str, attributes: Optional[Dict[str, Any]] = None, trace_id: Optional[str] = None
     ):
-        """Context manager for creating a trace span.
+        """Create a trace span that measures execution time.
 
         Args:
-            name: Name of the span (e.g., "agent.generate", "tool.search")
-            attributes: Additional attributes to attach to span
-            trace_id: Trace ID (uses current if not provided)
+            name: Span name (e.g., "agent.generate_content")
+            attributes: Additional metadata to attach
+            trace_id: Trace ID (generated if not provided)
 
         Yields:
             Span ID
         """
-        # Use provided trace_id or current or create new
-        trace_id = trace_id or self.current_trace_id or self.start_trace()
-        span_id = self._generate_span_id()
-
+        trace_id = trace_id or self.start_trace()
+        span_id = str(int(time.time() * 1000000))[-16:]  # 16-digit (Google Cloud Trace requirement)
         start_time = time.time()
 
         try:
             yield span_id
         finally:
-            end_time = time.time()
-            (end_time - start_time) * 1000
+            self._send_span(trace_id, span_id, name, start_time, time.time(), attributes or {})
 
-            # Create and send span
-            self._create_span(
-                trace_id=trace_id,
-                span_id=span_id,
-                name=name,
-                start_time=start_time,
-                end_time=end_time,
-                attributes=attributes or {},
-            )
-
-    def _create_span(
+    def _send_span(
         self,
         trace_id: str,
         span_id: str,
@@ -92,56 +63,40 @@ class CloudTracer:
         end_time: float,
         attributes: Dict[str, Any],
     ) -> None:
-        """Create and send a span to Cloud Trace."""
-        # Add agent name to attributes
-        attributes["agent_name"] = self.agent_name
-
-        # Convert timestamps to protobuf format
-        from google.protobuf.timestamp_pb2 import Timestamp
-
-        start_timestamp = Timestamp()
-        start_timestamp.FromSeconds(int(start_time))
-
-        end_timestamp = Timestamp()
-        end_timestamp.FromSeconds(int(end_time))
-
-        # Create span
-        span = Span(
-            name=f"{self.project_name}/traces/{trace_id}/spans/{span_id}",
-            span_id=span_id,
-            display_name=TruncatableString(value=name),
-            start_time=start_timestamp,
-            end_time=end_timestamp,
-            attributes=Span.Attributes(
-                attribute_map={k: self._convert_attribute(v) for k, v in attributes.items()}
-            ),
-        )
-
-        # Send to Cloud Trace (batch for efficiency in production)
+        """Send span to Cloud Trace."""
         try:
-            # The create_span method expects (name, span) parameters
+            # Add agent name to attributes
+            attributes["agent_name"] = self.agent_name
+
+            # Convert timestamps
+            start_ts = Timestamp()
+            start_ts.FromSeconds(int(start_time))
+            end_ts = Timestamp()
+            end_ts.FromSeconds(int(end_time))
+
+            # Create and send span
+            span = Span(
+                name=f"{self.project_name}/traces/{trace_id}/spans/{span_id}",
+                span_id=span_id,
+                display_name=TruncatableString(value=name),
+                start_time=start_ts,
+                end_time=end_ts,
+                attributes=Span.Attributes(
+                    attribute_map={k: self._to_attribute(v) for k, v in attributes.items()}
+                ),
+            )
+
             self.client.create_span(name=span.name, span=span)  # type: ignore[call-arg]
+
         except Exception as e:
             # Don't fail the agent if tracing fails
-            print(f"Warning: Failed to create span: {e}")
+            print(f"Warning: Failed to send trace span: {e}")
 
-    def _convert_attribute(self, value: Any) -> Any:
-        """Convert attribute value to Cloud Trace format."""
-        from google.cloud.trace_v2.types import AttributeValue, TruncatableString
-
-        if isinstance(value, str):
-            return AttributeValue(string_value=TruncatableString(value=value))
+    def _to_attribute(self, value: Any) -> AttributeValue:
+        """Convert Python value to Cloud Trace attribute format."""
+        if isinstance(value, bool):
+            return AttributeValue(bool_value=value)
         elif isinstance(value, int):
             return AttributeValue(int_value=value)
-        elif isinstance(value, bool):
-            return AttributeValue(bool_value=value)
         else:
             return AttributeValue(string_value=TruncatableString(value=str(value)))
-
-    def _generate_trace_id(self) -> str:
-        """Generate a unique trace ID."""
-        return uuid.uuid4().hex
-
-    def _generate_span_id(self) -> str:
-        """Generate a unique span ID."""
-        return str(int(time.time() * 1000000))[-16:]  # 16-digit span ID

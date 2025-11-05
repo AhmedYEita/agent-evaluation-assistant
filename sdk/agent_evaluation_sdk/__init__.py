@@ -1,7 +1,5 @@
 """
-Agent Evaluation SDK
-
-Production-ready evaluation infrastructure for AI agents.
+Agent Evaluation SDK.
 """
 
 import shutil
@@ -27,11 +25,6 @@ def create_config_template(target_path: str = "eval_config.yaml") -> None:
 
     Args:
         target_path: Path where the config template should be created (default: eval_config.yaml)
-
-    Example:
-        >>> from agent_evaluation_sdk import create_config_template
-        >>> create_config_template("my_eval_config.yaml")
-        ✅ Created eval_config.yaml template at: my_eval_config.yaml
     """
     # Get the template path from the installed package
     template_path = Path(__file__).parent / "templates" / "eval_config.template.yaml"
