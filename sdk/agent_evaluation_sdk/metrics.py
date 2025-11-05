@@ -106,7 +106,6 @@ class CloudMetrics:
             metric_kind=ga_metric.MetricDescriptor.MetricKind.GAUGE,
         )
 
-
     def _write_metric(
         self,
         metric_type: str,
