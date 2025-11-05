@@ -12,6 +12,7 @@ on:
     paths:
       - 'terraform/**'
       - 'sdk/**'
+      - '.github/workflows/validate-infra.yml'
 
 jobs:
   validate-infrastructure:
