@@ -37,14 +37,14 @@ class DatasetConfig:
     """Configuration for dataset collection."""
 
     auto_collect: bool = False  # Opt-in only
-    storage_location: Optional[str] = None  # BigQuery table or GCS bucket
+    storage_location: Optional[str] = None  # BigQuery table
+    buffer_size: int = 10  # Number of interactions to buffer before writing to BigQuery
 
 
 @dataclass
 class GenAIEvalConfig:
     """Configuration for Gen AI Evaluation Service."""
 
-    enabled: bool = False  # Opt-in to run evaluations
     metrics: List[str] = field(default_factory=lambda: ["bleu", "rouge"])  # Automated metrics
     model_name: str = "gemini-1.5-flash"  # Model for model-based evaluation
     criteria: List[str] = field(
@@ -55,7 +55,7 @@ class GenAIEvalConfig:
             "groundedness",
             "fulfillment",
         ]
-    )  # Pointwise criteria
+    )  # Pointwise model-based evaluation criteria
     thresholds: dict = field(
         default_factory=lambda: {}
     )  # Optional score thresholds for pass/fail (0-1 scale)

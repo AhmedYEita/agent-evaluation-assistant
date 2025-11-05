@@ -37,8 +37,7 @@ dataset:
   auto_collect: true  # Enable collecting interactions to construct a testing dataset
 
 genai_eval:
-  enabled: true
-  # List the metrics and criteria needed for evaluation
+  # Configure metrics for run_evaluation.py
   metrics: ["bleu", "rouge"]
   criteria: ["coherence", "fluency", "safety"]
 ```

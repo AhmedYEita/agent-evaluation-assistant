@@ -62,6 +62,7 @@ class EvaluationWrapper:
                 project_id=config.project_id,
                 agent_name=config.agent_name,
                 storage_location=config.dataset.storage_location,
+                buffer_size=config.dataset.buffer_size,
             )
 
         # Wrap agent methods
