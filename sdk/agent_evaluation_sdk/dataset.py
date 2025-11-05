@@ -17,6 +17,7 @@ class DatasetCollector:
         project_id: str,
         agent_name: str,
         storage_location: Optional[str] = None,
+        buffer_size: int = 10,
     ):
         """Initialize dataset collector.
 
@@ -24,6 +25,7 @@ class DatasetCollector:
             project_id: GCP project ID
             agent_name: Name of the agent
             storage_location: BigQuery table (project.dataset.table) or GCS bucket
+            buffer_size: Number of interactions to buffer before writing to BigQuery
         """
         self.project_id = project_id
         self.agent_name = agent_name
@@ -42,7 +44,7 @@ class DatasetCollector:
 
         # In-memory buffer for batch writes
         self.buffer: List[Dict[str, Any]] = []
-        self.buffer_size = 10  # Write every 10 samples
+        self.buffer_size = buffer_size
 
     def add_interaction(
         self,

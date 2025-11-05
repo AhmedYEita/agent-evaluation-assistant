@@ -106,27 +106,6 @@ class CloudMetrics:
             metric_kind=ga_metric.MetricDescriptor.MetricKind.GAUGE,
         )
 
-    def record_custom_metric(
-        self,
-        metric_name: str,
-        value: float,
-        labels: Optional[Dict[str, str]] = None,
-    ) -> None:
-        """Record a custom metric.
-
-        Args:
-            metric_name: Name of the custom metric
-            value: Metric value
-            labels: Additional labels for the metric
-        """
-        self._write_metric(
-            metric_type=f"{self.metric_prefix}/custom/{metric_name}",
-            value=value,
-            labels=labels or {},
-            value_type=ga_metric.MetricDescriptor.ValueType.DOUBLE,
-            metric_kind=ga_metric.MetricDescriptor.MetricKind.GAUGE,
-        )
-
     def _write_metric(
         self,
         metric_type: str,

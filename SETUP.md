@@ -318,15 +318,29 @@ Customize services in `eval_config.yaml`:
 
 ```yaml
 logging:
+  enabled: true
   level: "INFO"
   include_trajectories: true
+
 tracing:
   enabled: true
+
 metrics:
   enabled: true
+
 dataset:
-  auto_collect: true  # Enable dataset collection (collects all interactions)
+  auto_collect: false # Enable dataset collection
+  buffer_size: 10     # Write to BigQuery every N interactions (default: 10)
 ```
+
+**Service Control:**
+- Set `enabled: false` on any service to disable it and reduce costs
+- All services are enabled by default except `dataset.auto_collect`
+
+**Buffer Size Guidelines:**
+- **Testing/Development**: `1` (immediate writes for debugging)
+- **Low-traffic production**: `10` (default, good balance)
+- **High-traffic production**: `50-100` (better performance, fewer API calls)
 
 Then load it in your agent:
 
@@ -403,7 +417,6 @@ dataset:
   auto_collect: true
 
 genai_eval:
-  enabled: true
   metrics: ["bleu", "rouge"]
   criteria: ["coherence", "fluency", "safety", "groundedness"]
 ```

@@ -1,18 +1,19 @@
 # Agent Evaluation Agent
 
-**Production-ready evaluation infrastructure for AI agents with automated monitoring and testing dataset collection.**
+**Production-ready evaluation infrastructure for AI agents with automated monitoring, testing, and quality evaluation.**
 
 ## Overview
 
-A lightweight Python SDK and Terraform infrastructure that enables comprehensive evaluation for Google ADK agents with minimal code changes. Get structured logging, performance tracing, metrics dashboards, and dataset collection by adding just one line of code to your agent.
+A lightweight Python SDK and Terraform infrastructure that enables comprehensive evaluation for Google ADK agents with minimal code changes. Get structured logging, performance tracing, metrics dashboards, dataset collection, and quality testing by adding just one line of code to your agent.
 
 ### Key Features
 
 - **One-Line Integration**: Enable full evaluation with a single function call
 - **Automated Data Collection**: Logs, traces, metrics, and datasets captured automatically
 - **Production-Ready**: Built on GCP services (Cloud Logging, Trace, Monitoring, BigQuery)
-- **Cost-Optimized**: Configurable sampling rates, ~$10/month for 10K requests
+- **Quality Evaluation**: Vertex AI Gen AI Evaluation Service for automated and model-based metrics
 - **Infrastructure as Code**: Reproducible Terraform deployment
+- **Flexible Configuration**: Enable/disable services and tune performance per environment
 
 ## 🚀 Quick Start
 
@@ -31,8 +32,14 @@ agent_name: "my-agent"
 agent:
   model: "gemini-2.0-flash-exp"
 
+logging:
+  enabled: true       # Set to false to disable logging
+tracing:
+  enabled: true       # Set to false to disable tracing
+metrics:
+  enabled: true       # Set to false to disable metrics
 dataset:
-  auto_collect: true  # Enable dataset collection
+  auto_collect: false # Enable dataset collection
 ```
 
 ### 3. Enable Evaluation (3 lines!)
