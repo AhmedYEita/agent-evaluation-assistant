@@ -309,7 +309,7 @@ class EvaluationWrapper:
             @functools.wraps(func)
             def wrapped(*args, **kwargs):
                 # Get trace context from thread-local storage
-                trace_context = getattr(self._trace_context, 'context', None)
+                trace_context = getattr(self._trace_context, "context", None)
                 if self.tracer and trace_context:
                     trace_id, parent_span_id = trace_context
                     with self.tracer.span(
