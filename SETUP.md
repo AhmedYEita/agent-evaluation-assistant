@@ -345,13 +345,13 @@ metrics:
 
 dataset:
   auto_collect: false # Enable dataset collection
-  storage_location: null  # Where to store collected interactions (null: use default naming)
+  storage_location: null  # BigQuery table for storing collected interactions (null = auto-created table)
   buffer_size: 10     # Write to BigQuery every N interactions (default: 10)
 
 regression:
   test_limit: null  # Max test cases (null = no limit)
   only_reviewed: true  # Only use reviewed test cases
-  dataset_table: null  # Where to read test cases from (null: use default naming)
+  dataset_table: null  # Custom BigQuery source table (null = use default: {project_id}.agent_evaluation.{agent_name}_eval_dataset)
 ```
 
 **Service Control:**
