@@ -38,36 +38,46 @@ class RegressionTester:
         Raises:
             ValueError: If name contains invalid characters
         """
-        # BigQuery table names: letters, numbers, underscores only
-        if not name.replace("_", "").replace("-", "").isalnum():
+        # Validate BigQuery table names: letters, numbers, underscores, hyphens, and spaces only
+        if not name.replace("_", "").replace("-", "").replace(" ", "").isalnum():
             raise ValueError(
                 f"Invalid agent name: '{name}'. "
-                f"Must contain only letters, numbers, underscores, and hyphens."
+                f"Must contain only letters, numbers, underscores, hyphens, and spaces."
             )
-        return name.replace("-", "_")  # Replace hyphens with underscores
+        # Sanitize name: replace hyphens and spaces with underscores
+        return name.replace("-", "_").replace(" ", "_")
 
     def fetch_test_cases(
-        self, only_reviewed: bool = True, limit: Optional[int] = None
+        self,
+        only_reviewed: bool = True,
+        limit: Optional[int] = None,
+        dataset_table: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """Fetch test cases from BigQuery.
 
         Args:
             only_reviewed: If True, only fetch reviewed test cases
             limit: Optional limit on number of test cases to fetch
+            dataset_table: Optional custom BigQuery table name (overrides default)
 
         Returns:
             List of test cases with instruction, reference, and context
         """
+        # Determine table name: use custom if provided, otherwise use default naming
+        if dataset_table:
+            table_name = dataset_table
+        else:
+            table_name = f"{self.project_id}.agent_evaluation.{self.agent_name}_eval_dataset"
+
         # Use parameterized query to prevent SQL injection
         query = """
             SELECT instruction, reference, context
-            FROM `{project_id}.agent_evaluation.{agent_name}_eval_dataset`
+            FROM `{table_name}`
             {where_clause}
             ORDER BY timestamp DESC
             {limit_clause}
         """.format(
-            project_id=self.project_id,
-            agent_name=self.agent_name,
+            table_name=table_name,
             where_clause="WHERE reviewed = TRUE" if only_reviewed else "",
             limit_clause=f"LIMIT {int(limit)}" if limit else "",
         )
@@ -245,6 +255,7 @@ class RegressionTester:
         test_run_name: str,
         only_reviewed: bool = True,
         limit: Optional[int] = None,
+        dataset_table: Optional[str] = None,
         metrics: Optional[List[str]] = None,
         criteria: Optional[List[str]] = None,
         thresholds: Optional[Dict[str, float]] = None,
@@ -258,6 +269,7 @@ class RegressionTester:
             test_run_name: Name for this test run
             only_reviewed: If True, only use reviewed test cases
             limit: Optional limit on number of test cases
+            dataset_table: Optional custom BigQuery table name
             metrics: List of metrics to compute (e.g., ["bleu", "rouge"])
             criteria: List of criteria for evaluation
             thresholds: Optional dict of minimum scores for pass/fail
@@ -272,7 +284,9 @@ class RegressionTester:
         print("=" * 70)
 
         # 1. Fetch test cases
-        test_cases = self.fetch_test_cases(only_reviewed=only_reviewed, limit=limit)
+        test_cases = self.fetch_test_cases(
+            only_reviewed=only_reviewed, limit=limit, dataset_table=dataset_table
+        )
         if not test_cases:
             print("❌ No test cases found")
             return {"error": "No test cases found"}
