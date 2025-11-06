@@ -176,11 +176,19 @@ class EvaluationWrapper:
                             parent_span_id=parent_span_id,
                         ):
                             self.logger.log_interaction(
-                                interaction_id, input_data, output_data, duration_ms, metadata
+                                interaction_id=interaction_id,
+                                input_data=input_data,
+                                output_data=output_data,
+                                duration_ms=duration_ms,
+                                metadata=metadata,
                             )
                     else:
                         self.logger.log_interaction(
-                            interaction_id, input_data, output_data, duration_ms, metadata
+                            interaction_id=interaction_id,
+                            input_data=input_data,
+                            output_data=output_data,
+                            duration_ms=duration_ms,
+                            metadata=metadata,
                         )
 
                 # Record success metrics

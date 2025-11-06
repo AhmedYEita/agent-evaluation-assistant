@@ -51,7 +51,7 @@ class CloudTracer:
             Tuple of (trace_id, span_id) for creating child spans
         """
         trace_id = trace_id or self.start_trace()
-        span_id = str(int(time.time() * 1000000))[-16:]  # 16-digit (Google Cloud Trace requirement)
+        span_id = uuid.uuid4().hex[:16]  # 16-character (Google Cloud Trace requirement)
         start_time = time.time()
         error_info = None
 
@@ -126,9 +126,10 @@ class CloudTracer:
             print(f"Warning: Failed to send trace span: {e}")
 
     def _to_timestamp(self, time_float: float) -> Timestamp:
-        """Convert float timestamp to Protobuf Timestamp."""
+        """Convert float timestamp to Protobuf Timestamp with nanosecond precision."""
         ts = Timestamp()
-        ts.FromSeconds(int(time_float))
+        ts.seconds = int(time_float)
+        ts.nanos = int((time_float % 1) * 1e9)
         return ts
 
     def _to_attribute(self, value: Any) -> AttributeValue:

@@ -20,7 +20,7 @@ def create_agent():
     agent = Agent(
         model=config.agent.model,
         system_instruction=(
-            "You are a helpful AI assistant with access to a calculator tool and a mock search tool. "
+            "You are a helpful AI assistant with access to mock calculator and search tools. "
             "Provide clear, concise answers to user questions."
         ),
     )
@@ -36,21 +36,17 @@ def create_agent():
     # Define tools with tracing
     @wrapper.tool_trace("search")
     def search_tool(query: str) -> str:
-        """Search the web for information."""
+        """Search the web for information (mock implementation)."""
         # Simulate search API call
         time.sleep(0.5)
-        return f"Search results for '{query}': Wikipedia article about {query}"
+        return f"Search web for '{query}'"
 
     @wrapper.tool_trace("calculator")
     def calculator_tool(expression: str) -> str:
-        """Evaluate mathematical expressions."""
+        """Evaluate mathematical expressions (mock implementation)."""
         # Simulate calculation
         time.sleep(0.2)
-        try:
-            result = eval(expression)
-            return f"Result: {result}"
-        except Exception as e:
-            return f"Error: {str(e)}"
+        return "Mock result: X"
 
     # Register tools with agent
     agent.add_tools([search_tool, calculator_tool])
