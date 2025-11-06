@@ -5,8 +5,10 @@ Provides automatic instrumentation for logging, tracing, metrics, and dataset co
 """
 
 import functools
+import threading
 import time
 import uuid
+from contextlib import nullcontext
 from pathlib import Path
 from typing import Any, Callable, Optional
 
@@ -65,8 +67,8 @@ class EvaluationWrapper:
                 buffer_size=config.dataset.buffer_size,
             )
 
-        # Track current trace context for tool tracing
-        self._current_trace_context = None
+        # Thread-local storage for trace context (for tool tracing)
+        self._trace_context = threading.local()
 
         # Wrap agent methods
         self._wrap_agent()
@@ -134,8 +136,8 @@ class EvaluationWrapper:
                         },
                         trace_id=trace_id,
                     ) as (trace_id, parent_span_id):
-                        # Store trace context for tool tracing
-                        self._current_trace_context = (trace_id, parent_span_id)
+                        # Store trace context for tool tracing (thread-safe)
+                        self._trace_context.context = (trace_id, parent_span_id)
 
                         try:
                             # Child span: LLM API call
@@ -156,8 +158,8 @@ class EvaluationWrapper:
                                 output_data = self._extract_output(response)
                                 metadata = self._extract_metadata(response)
                         finally:
-                            # Clear trace context
-                            self._current_trace_context = None
+                            # Clear trace context (thread-safe)
+                            self._trace_context.context = None
                 else:
                     response = original_method(*args, **kwargs)
                     output_data = self._extract_output(response)
@@ -168,21 +170,17 @@ class EvaluationWrapper:
 
                 # Log successful interaction
                 if self.logger and self.config.logging.include_trajectories:
-                    # Wrap in tracing span if tracer is enabled
-                    if self.tracer:
-                        with self.tracer.span(
+                    # Conditionally wrap in tracing span
+                    span_context = (
+                        self.tracer.span(
                             name="logging.write",
                             trace_id=trace_id,
                             parent_span_id=parent_span_id,
-                        ):
-                            self.logger.log_interaction(
-                                interaction_id=interaction_id,
-                                input_data=input_data,
-                                output_data=output_data,
-                                duration_ms=duration_ms,
-                                metadata=metadata,
-                            )
-                    else:
+                        )
+                        if self.tracer
+                        else nullcontext()
+                    )
+                    with span_context:
                         self.logger.log_interaction(
                             interaction_id=interaction_id,
                             input_data=input_data,
@@ -310,8 +308,10 @@ class EvaluationWrapper:
         def decorator(func):
             @functools.wraps(func)
             def wrapped(*args, **kwargs):
-                if self.tracer and self._current_trace_context:
-                    trace_id, parent_span_id = self._current_trace_context
+                # Get trace context from thread-local storage
+                trace_context = getattr(self._trace_context, 'context', None)
+                if self.tracer and trace_context:
+                    trace_id, parent_span_id = trace_context
                     with self.tracer.span(
                         name=f"tool.{tool_name}",
                         trace_id=trace_id,
