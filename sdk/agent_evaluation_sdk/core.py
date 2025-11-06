@@ -120,10 +120,10 @@ class EvaluationWrapper:
             input_data = args[0] if args else kwargs.get("prompt", kwargs.get("input", ""))
             start_time = time.time()
 
-            # Start trace and execute agent
+            # Execute agent with tracing, logging, metrics, and dataset collection
             try:
                 if self.tracer:
-                    trace_id = self.tracer.start_trace()
+                    trace_id = self.tracer.generate_trace_id()
                     # Parent span: Overall agent interaction
                     with self.tracer.span(
                         name="agent.generate_content",

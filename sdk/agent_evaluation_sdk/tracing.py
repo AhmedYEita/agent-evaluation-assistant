@@ -27,7 +27,7 @@ class CloudTracer:
         self.client = TraceServiceClient()
         self.project_name = f"projects/{project_id}"
 
-    def start_trace(self) -> str:
+    def generate_trace_id(self) -> str:
         """Generate and return a new trace ID."""
         return uuid.uuid4().hex
 
@@ -50,7 +50,7 @@ class CloudTracer:
         Yields:
             Tuple of (trace_id, span_id) for creating child spans
         """
-        trace_id = trace_id or self.start_trace()
+        trace_id = trace_id or self.generate_trace_id()
         span_id = uuid.uuid4().hex[:16]  # 16-character (Google Cloud Trace requirement)
         start_time = time.time()
         error_info = None
