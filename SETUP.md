@@ -345,7 +345,13 @@ metrics:
 
 dataset:
   auto_collect: false # Enable dataset collection
+  storage_location: null  # Where to store collected interactions (null: use default naming)
   buffer_size: 10     # Write to BigQuery every N interactions (default: 10)
+
+regression:
+  test_limit: null  # Max test cases (null = no limit)
+  only_reviewed: true  # Only use reviewed test cases
+  dataset_table: null  # Where to read test cases from (null: use default naming)
 ```
 
 **Service Control:**
@@ -458,6 +464,11 @@ Tool spans appear in Cloud Trace as `tool.{name}` under `agent.generate_content`
 ### Regression Testing
 
 Run `python run_evaluation.py` to test your current agent against the test dataset.
+
+**Configuration Options:**
+- `test_limit`: Max test cases (null = no limit)
+- `only_reviewed`: Use only reviewed cases (default: true)
+- `dataset_table`: Custom BigQuery source (null = use default table)
 
 **BigQuery Tables Created:**
 

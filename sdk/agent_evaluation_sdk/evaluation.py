@@ -170,17 +170,18 @@ class GenAIEvaluator:
         return {"score": 0.0, "count": count}
 
     def _error_response(self, error_msg: str, count: int, metric_name: str = "") -> Dict[str, Any]:
-        """Create error response dictionary.
+        """Create error response dictionary matching metric's expected format.
 
         Args:
             error_msg: Error message
             count: Number of test cases
-            metric_name: Optional metric name for specific formatting
+            metric_name: Metric name ("rouge" has special format, others use "score")
 
         Returns:
-            Error response dictionary
+            Error response dictionary matching the metric's structure
         """
         if metric_name == "rouge":
+            # ROUGE returns multiple sub-scores
             return {
                 "rougeL": 0.0,
                 "rouge1": 0.0,
@@ -188,6 +189,7 @@ class GenAIEvaluator:
                 "count": count,
                 "error": error_msg,
             }
+        # BLEU and other metrics return a single score
         return {"score": 0.0, "count": count, "error": error_msg}
 
     def _add_pass_rate(

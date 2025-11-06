@@ -37,7 +37,9 @@ class DatasetConfig:
     """Configuration for dataset collection."""
 
     auto_collect: bool = False  # Opt-in only
-    storage_location: Optional[str] = None  # BigQuery table
+    storage_location: Optional[str] = (
+        None  # BigQuery table for storing collected interactions (None = auto-created table)
+    )
     buffer_size: int = 10  # Number of interactions to buffer before writing to BigQuery
 
 
@@ -62,6 +64,17 @@ class GenAIEvalConfig:
 
 
 @dataclass
+class RegressionConfig:
+    """Configuration for regression testing."""
+
+    test_limit: Optional[int] = None  # Max number of test cases (None = no limit)
+    only_reviewed: bool = True  # Only use reviewed test cases
+    dataset_table: Optional[str] = (
+        None  # Read from a custom BigQuery table for test cases (None = use default naming)
+    )
+
+
+@dataclass
 class AgentConfig:
     """Configuration for agent initialization."""
 
@@ -79,6 +92,7 @@ class EvaluationConfig:
     metrics: MetricsConfig = field(default_factory=MetricsConfig)
     dataset: DatasetConfig = field(default_factory=DatasetConfig)
     genai_eval: GenAIEvalConfig = field(default_factory=GenAIEvalConfig)
+    regression: RegressionConfig = field(default_factory=RegressionConfig)
     agent: AgentConfig = field(default_factory=AgentConfig)
 
     @classmethod
@@ -95,6 +109,7 @@ class EvaluationConfig:
             metrics=MetricsConfig(**data.get("metrics", {})),
             dataset=DatasetConfig(**data.get("dataset", {})),
             genai_eval=GenAIEvalConfig(**data.get("genai_eval", {})),
+            regression=RegressionConfig(**data.get("regression", {})),
             agent=AgentConfig(**data.get("agent", {})),
         )
 

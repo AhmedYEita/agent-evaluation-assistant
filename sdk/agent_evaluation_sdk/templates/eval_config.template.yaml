@@ -25,7 +25,7 @@ metrics:
 # Dataset Collection Configuration
 dataset:
   auto_collect: false  # When enabled, records interactions
-  storage_location: null  # Use default (auto-created BigQuery table)
+  storage_location: null  # BigQuery table for storing collected interactions (null = auto-created table)
   buffer_size: 10  # Number of interactions to buffer before writing to BigQuery
 
 # Gen AI Evaluation Configuration
@@ -41,4 +41,10 @@ genai_eval:
     safety: 0.9
     groundedness: 0.7
     fulfillment: 0.6
+
+# Regression Testing Configuration
+regression:
+  test_limit: null  # Max number of test cases (null = no limit)
+  only_reviewed: true  # Only use reviewed test cases
+  dataset_table: null  # Read from a custom BigQuery table for test cases (null = use default: {project_id}.agent_evaluation.{agent_name}_eval_dataset)
 
