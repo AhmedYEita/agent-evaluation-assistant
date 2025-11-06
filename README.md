@@ -59,9 +59,9 @@ enable_evaluation(agent, config.project_id, config.agent_name, config=config)
 After `enable_evaluation()`, every agent interaction automatically gets:
 
 ✅ **Structured Logging** - Every interaction logged to Cloud Logging  
-✅ **Performance Tracing** - Latency breakdown in Cloud Trace  
+✅ **Performance Tracing** - Nested spans show LLM call, processing, and logging time  
 ✅ **Real-time Metrics** - Pre-built dashboard in Cloud Monitoring  
-✅ **Error Tracking** - Automatic error logging and alerts  
+✅ **Error Tracking** - Automatic error capture in traces and logs  
 ✅ **Dataset Collection** - Optional auto-capture to BigQuery
 
 ### Quality Testing (Manual)

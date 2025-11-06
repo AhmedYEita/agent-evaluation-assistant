@@ -71,6 +71,7 @@ response = agent.generate_content("Hello!")
 - **Performance Tracing**: Cloud Trace integration for latency tracking
 - **Metrics**: Cloud Monitoring for dashboards and alerts
 - **Dataset Collection**: Auto-capture interactions for evaluation
+- **Tool Tracing**: Optional decorator for tracing individual tool calls
 - **Flexible Configuration**: Control costs with enabled/disabled flags
 
 ## Documentation

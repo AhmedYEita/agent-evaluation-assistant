@@ -258,7 +258,22 @@ gcloud logging read "resource.labels.agent_name=simple-adk-agent" \
 open "https://console.cloud.google.com/traces?project=$(gcloud config get-value project)"
 ```
 
-**Expected**: Trace entries showing agent.generate_content spans
+**Expected**: Nested trace spans showing performance breakdown
+
+- `agent.generate_content` - Total interaction time
+- `llm.generate` - LLM API call time  
+- `processing.extract` - Response processing time
+- `logging.write` - Logging overhead
+
+**Attributes**: `interaction_id`, `model`, token counts, `error` (on failures)
+
+**Filtering in Cloud Trace:**
+- Errors: `error:true` or `error.type:"ValueError"`
+- Model: `model:"gemini-2.0-flash-exp"`
+- Token usage: `total_tokens > 1000`
+- Link to logs: Use `interaction_id` attribute
+
+---
 
 ### Check Cloud Monitoring
 
@@ -420,6 +435,25 @@ genai_eval:
   metrics: ["bleu", "rouge"]
   criteria: ["coherence", "fluency", "safety", "groundedness"]
 ```
+
+### Optional: Tool Tracing
+
+To trace individual tool calls within your agent, apply the `@wrapper.tool_trace()` decorator:
+
+```python
+# Enable evaluation and get wrapper
+wrapper = enable_evaluation(agent, project_id, agent_name, config=config)
+
+# Decorate tools
+@wrapper.tool_trace("search")
+def search_tool(query: str):
+    return search_api(query)
+
+# Register with agent
+agent.add_tools([search_tool])
+```
+
+Tool spans appear in Cloud Trace as `tool.{name}` under `agent.generate_content`.
 
 ### Regression Testing
 
