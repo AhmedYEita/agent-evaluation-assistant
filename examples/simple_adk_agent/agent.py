@@ -2,12 +2,13 @@
 Simple ADK Agent with Evaluation integration.
 """
 
-from google.genai.adk import Agent
+import time
 from pathlib import Path
 
+from google.genai.adk import Agent
+
 # Import the evaluation SDK
-from agent_evaluation_sdk import enable_evaluation
-from agent_evaluation_sdk.config import EvaluationConfig
+from agent_evaluation_sdk import enable_evaluation, EvaluationConfig
 
 
 def create_agent():
@@ -19,18 +20,40 @@ def create_agent():
     agent = Agent(
         model=config.agent.model,
         system_instruction=(
-            "You are a helpful AI assistant that provides "
-            "clear, concise answers to user questions."
+            "You are a helpful AI assistant with access to a calculator tool and a mock search tool. "
+            "Provide clear, concise answers to user questions."
         ),
     )
 
-    # Enable evaluation - that's it!
-    enable_evaluation(
+    # Enable evaluation and get wrapper for tool tracing
+    wrapper = enable_evaluation(
         agent=agent,
         project_id=config.project_id,
         agent_name=config.agent_name,
         config=config,
     )
+
+    # Define tools with tracing
+    @wrapper.tool_trace("search")
+    def search_tool(query: str) -> str:
+        """Search the web for information."""
+        # Simulate search API call
+        time.sleep(0.5)
+        return f"Search results for '{query}': Wikipedia article about {query}"
+
+    @wrapper.tool_trace("calculator")
+    def calculator_tool(expression: str) -> str:
+        """Evaluate mathematical expressions."""
+        # Simulate calculation
+        time.sleep(0.2)
+        try:
+            result = eval(expression)
+            return f"Result: {result}"
+        except Exception as e:
+            return f"Error: {str(e)}"
+
+    # Register tools with agent
+    agent.add_tools([search_tool, calculator_tool])
 
     return agent, config
 

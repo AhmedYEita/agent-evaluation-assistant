@@ -65,6 +65,9 @@ class EvaluationWrapper:
                 buffer_size=config.dataset.buffer_size,
             )
 
+        # Track current trace context for tool tracing
+        self._current_trace_context = None
+
         # Wrap agent methods
         self._wrap_agent()
 
@@ -121,29 +124,64 @@ class EvaluationWrapper:
             try:
                 if self.tracer:
                     trace_id = self.tracer.start_trace()
+                    # Parent span: Overall agent interaction
                     with self.tracer.span(
                         name="agent.generate_content",
-                        attributes={"interaction_id": interaction_id},
+                        attributes={
+                            "interaction_id": interaction_id,
+                            "model": self.config.agent.model,
+                            "input_length": len(str(input_data)),
+                        },
                         trace_id=trace_id,
-                    ):
-                        response = original_method(*args, **kwargs)
+                    ) as (trace_id, parent_span_id):
+                        # Store trace context for tool tracing
+                        self._current_trace_context = (trace_id, parent_span_id)
+
+                        try:
+                            # Child span: LLM API call
+                            with self.tracer.span(
+                                name="llm.generate",
+                                attributes={"model": self.config.agent.model},
+                                trace_id=trace_id,
+                                parent_span_id=parent_span_id,
+                            ):
+                                response = original_method(*args, **kwargs)
+
+                            # Child span: Post-processing
+                            with self.tracer.span(
+                                name="processing.extract",
+                                trace_id=trace_id,
+                                parent_span_id=parent_span_id,
+                            ):
+                                output_data = self._extract_output(response)
+                                metadata = self._extract_metadata(response)
+                        finally:
+                            # Clear trace context
+                            self._current_trace_context = None
                 else:
                     response = original_method(*args, **kwargs)
+                    output_data = self._extract_output(response)
+                    metadata = self._extract_metadata(response)
 
-                # Extract response data
+                # Calculate duration
                 duration_ms = (time.time() - start_time) * 1000
-                output_data = self._extract_output(response)
-                metadata = self._extract_metadata(response)
 
                 # Log successful interaction
                 if self.logger and self.config.logging.include_trajectories:
-                    self.logger.log_interaction(
-                        interaction_id=interaction_id,
-                        input_data=input_data,
-                        output_data=output_data,
-                        duration_ms=duration_ms,
-                        metadata=metadata,
-                    )
+                    # Wrap in tracing span if tracer is enabled
+                    if self.tracer:
+                        with self.tracer.span(
+                            name="logging.write",
+                            trace_id=trace_id,
+                            parent_span_id=parent_span_id,
+                        ):
+                            self.logger.log_interaction(
+                                interaction_id, input_data, output_data, duration_ms, metadata
+                            )
+                    else:
+                        self.logger.log_interaction(
+                            interaction_id, input_data, output_data, duration_ms, metadata
+                        )
 
                 # Record success metrics
                 if self.metrics:
@@ -245,6 +283,40 @@ class EvaluationWrapper:
         """Flush any buffered data (e.g., dataset samples)."""
         if self.dataset_collector:
             self.dataset_collector.flush()
+
+    def tool_trace(self, tool_name: str):
+        """Decorator for tracing tool execution within agent calls.
+
+        Usage:
+            @wrapper.tool_trace("search")
+            def search_tool(query: str):
+                return search_api(query)
+
+        Args:
+            tool_name: Name of the tool (e.g., "search", "calculator")
+
+        Returns:
+            Decorator function
+        """
+
+        def decorator(func):
+            @functools.wraps(func)
+            def wrapped(*args, **kwargs):
+                if self.tracer and self._current_trace_context:
+                    trace_id, parent_span_id = self._current_trace_context
+                    with self.tracer.span(
+                        name=f"tool.{tool_name}",
+                        trace_id=trace_id,
+                        parent_span_id=parent_span_id,
+                    ):
+                        return func(*args, **kwargs)
+                else:
+                    # No-op if tracing disabled or not in agent context
+                    return func(*args, **kwargs)
+
+            return wrapped
+
+        return decorator
 
     def __del__(self):
         """Cleanup when wrapper is destroyed."""

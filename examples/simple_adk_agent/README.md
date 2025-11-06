@@ -6,7 +6,7 @@ This example demonstrates how to integrate the agent evaluation SDK with an ADK 
 
 **Files:**
 - `eval_config.yaml` - Configuration for evaluation parameters
-- `agent.py` - Agent with evaluation enabled
+- `agent.py` - Agent with evaluation enabled and tool tracing
 - `run_evaluation.py` - Evaluation testing script
 - `requirements.txt` - Python dependencies
 
@@ -14,6 +14,7 @@ This example demonstrates how to integrate the agent evaluation SDK with an ADK 
 - ✅ Easy integration (just a few lines of code)
 - ✅ Automatic logging, tracing, and metrics
 - ✅ Dataset collection for testing
+- ✅ Tool tracing (search, calculator)
 - ✅ Evaluation with Gen AI Evaluation Service
 
 ## Quick Start

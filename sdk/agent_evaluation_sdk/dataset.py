@@ -24,7 +24,7 @@ class DatasetCollector:
         Args:
             project_id: GCP project ID
             agent_name: Name of the agent
-            storage_location: BigQuery table (project.dataset.table) or GCS bucket
+            storage_location: BigQuery table (project.dataset.table)
             buffer_size: Number of interactions to buffer before writing to BigQuery
         """
         self.project_id = project_id
