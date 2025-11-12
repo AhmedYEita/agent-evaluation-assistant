@@ -29,6 +29,10 @@ class CloudMetrics:
         # Metric type prefix
         self.metric_prefix = "custom.googleapis.com/agent"
 
+        # Track last write time per metric to avoid sampling rate errors
+        self._last_write_time: Dict[str, float] = {}
+        self._min_write_interval = 60.0  # Minimum 60 seconds between writes for same metric
+
     def record_latency(self, duration_ms: float, labels: Optional[Dict[str, str]] = None) -> None:
         """Record agent response latency.
 
@@ -126,6 +130,15 @@ class CloudMetrics:
         # Add agent name to labels
         labels["agent_name"] = self.agent_name
 
+        # Create metric key for rate limiting
+        metric_key = f"{metric_type}:{':'.join(f'{k}={v}' for k, v in sorted(labels.items()))}"
+
+        # Check if we're writing too frequently
+        now = time.time()
+        last_write = self._last_write_time.get(metric_key, 0)
+        if now - last_write < self._min_write_interval:
+            return  # Skip this write to avoid rate limit errors
+
         # Create time series
         series = monitoring_v3.TimeSeries()
         series.metric.type = metric_type
@@ -136,7 +149,6 @@ class CloudMetrics:
         series.resource.labels["project_id"] = self.project_id
 
         # Create point
-        now = time.time()
         seconds = int(now)
         nanos = int((now - seconds) * 10**9)
 
@@ -158,6 +170,8 @@ class CloudMetrics:
         # Write time series
         try:
             self.client.create_time_series(name=self.project_name, time_series=[series])
+            self._last_write_time[metric_key] = now
         except Exception as e:
-            # Don't fail the agent if metrics fail
-            print(f"Warning: Failed to write metric: {e}")
+            # Silently ignore rate limit errors, warn on others
+            if "more frequently than the maximum sampling period" not in str(e):
+                print(f"Warning: Failed to write metric: {e}")

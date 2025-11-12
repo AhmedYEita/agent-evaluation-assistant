@@ -3,7 +3,9 @@ Dataset collection for agent evaluation.
 """
 
 import json
+import tempfile
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from google.cloud import bigquery
@@ -80,9 +82,9 @@ class DatasetCollector:
             "reference": response,  # Agent's response becomes the reference (ground truth)
             "context": None,  # Optional: can be populated from metadata
             "reviewed": False,  # Flag to track manual review status
-            # Additional debugging fields
-            "metadata": metadata or {},
-            "trajectory": trajectory or [],
+            # Additional debugging fields (serialize to JSON strings for BigQuery)
+            "metadata": json.dumps(metadata) if metadata else None,
+            "trajectory": json.dumps(trajectory) if trajectory else None,
         }
 
         # Add to buffer
@@ -93,26 +95,73 @@ class DatasetCollector:
             self.flush()
 
     def flush(self) -> None:
-        """Write buffered interactions to storage."""
+        """Write buffered interactions to storage using load job (supports UPDATE/DELETE)."""
         if not self.buffer:
             return
 
+        # Save current buffer and clear it immediately to avoid race conditions
+        buffer_to_write = self.buffer
+        self.buffer = []
+
         try:
-            # Write to BigQuery
-            table_ref = self.bq_client.get_table(self.storage_location)
-            errors = self.bq_client.insert_rows_json(table_ref, self.buffer)
+            # Ensure table exists before writing
+            self._ensure_table_exists()
 
-            if errors:
-                print(f"Warning: Errors inserting rows to BigQuery: {errors}")
+            # Write to temporary JSONL file
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as tmp_file:
+                for entry in buffer_to_write:
+                    json.dump(entry, tmp_file)
+                    tmp_file.write("\n")
+                tmp_path = tmp_file.name
 
-            # Clear buffer
-            self.buffer = []
+            try:
+                # Load data using load job (not streaming, supports UPDATE/DELETE)
+                job_config = bigquery.LoadJobConfig(
+                    source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON,
+                    write_disposition=bigquery.WriteDisposition.WRITE_APPEND,
+                    schema_update_options=[bigquery.SchemaUpdateOption.ALLOW_FIELD_ADDITION],
+                )
+
+                with open(tmp_path, "rb") as source_file:
+                    load_job = self.bq_client.load_table_from_file(
+                        source_file, self.storage_location, job_config=job_config
+                    )
+
+                # Wait for job to complete (with timeout)
+                load_job.result(timeout=60)
+
+                if load_job.errors:
+                    print(f"Warning: Errors loading data to BigQuery: {load_job.errors}")
+
+            finally:
+                # Clean up temp file
+                Path(tmp_path).unlink(missing_ok=True)
 
         except Exception as e:
             print(f"Warning: Failed to write dataset entries: {e}")
+            # Re-add failed entries to buffer for retry
+            self.buffer.extend(buffer_to_write)
 
     def _ensure_table_exists(self) -> None:
         """Create BigQuery table for test dataset if it doesn't exist."""
+        # Ensure dataset exists first
+        dataset_id = self.storage_location.split(".")[
+            1
+        ]  # Extract dataset from project.dataset.table
+        dataset_ref = f"{self.project_id}.{dataset_id}"
+
+        try:
+            self.bq_client.get_dataset(dataset_ref)
+        except Exception:
+            # Dataset doesn't exist, create it
+            dataset = bigquery.Dataset(dataset_ref)
+            dataset.location = "US"
+            try:
+                self.bq_client.create_dataset(dataset, exists_ok=True)
+                print(f"Created BigQuery dataset: {dataset_ref}")
+            except Exception:
+                pass  # Dataset might have been created by another process
+
         # Schema for test dataset (stores test cases with ground truth)
         schema = [
             bigquery.SchemaField("interaction_id", "STRING", mode="REQUIRED"),
@@ -136,11 +185,10 @@ class DatasetCollector:
         table.clustering_fields = ["agent_name", "timestamp"]
 
         try:
-            self.bq_client.create_table(table)
+            self.bq_client.create_table(table, exists_ok=True)
             print(f"Created BigQuery table: {self.storage_location}")
         except Exception:
-            # Table might already exist
-            pass
+            pass  # Table already exists
 
     def _serialize(self, data: Any) -> str:
         """Serialize data to JSON string."""

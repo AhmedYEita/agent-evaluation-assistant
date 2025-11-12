@@ -48,7 +48,7 @@ class GenAIEvalConfig:
     """Configuration for Gen AI Evaluation Service."""
 
     metrics: List[str] = field(default_factory=lambda: ["bleu", "rouge"])  # Automated metrics
-    model_name: str = "gemini-1.5-flash"  # Model for model-based evaluation
+    model_name: str = "gemini-2.5-flash"  # Model for model-based evaluation
     criteria: List[str] = field(
         default_factory=lambda: [
             "coherence",
@@ -78,7 +78,7 @@ class RegressionConfig:
 class AgentConfig:
     """Configuration for agent initialization."""
 
-    model: str = "gemini-2.0-flash-exp"
+    model: str = "gemini-2.5-flash"
 
 
 @dataclass

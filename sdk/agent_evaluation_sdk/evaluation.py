@@ -14,7 +14,7 @@ class GenAIEvaluator:
         self,
         project_id: str,
         location: str = "us-central1",
-        model_name: str = "gemini-1.5-flash",
+        model_name: str = "gemini-2.5-flash",
     ):
         """Initialize evaluator.
 

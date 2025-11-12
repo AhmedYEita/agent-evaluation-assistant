@@ -9,6 +9,7 @@ A lightweight Python SDK and Terraform infrastructure that enables comprehensive
 ### Key Features
 
 - **One-Line Integration**: Enable full evaluation with a single function call
+- **Zero-Latency Observability**: All Cloud API calls run in background threads
 - **Automated Data Collection**: Logs, traces, metrics, and datasets captured automatically
 - **Production-Ready**: Built on GCP services (Cloud Logging, Trace, Monitoring, BigQuery)
 - **Quality Evaluation**: Vertex AI Gen AI Evaluation Service for automated and model-based metrics
@@ -30,7 +31,7 @@ project_id: "GCP_PROJECT_ID"
 agent_name: "my-agent"
 
 agent:
-  model: "gemini-2.0-flash-exp"
+  model: "gemini-2.5-flash"
 
 logging:
   enabled: true       # Set to false to disable logging

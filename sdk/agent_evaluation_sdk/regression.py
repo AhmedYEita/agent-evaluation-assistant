@@ -124,17 +124,17 @@ class RegressionTester:
                 response_text = f"ERROR: {str(e)}"
                 error = str(e)
 
-            results.append(
-                {
-                    "instruction": instruction,
-                    "reference": reference,
-                    "response": response_text,
-                    "context": context,
-                    "test_run_id": str(uuid.uuid4()),
-                    "test_timestamp": datetime.utcnow().isoformat(),
-                    "error": error,
-                }
-            )
+                results.append(
+                    {
+                        "instruction": instruction,
+                        "reference": reference,
+                        "response": response_text,
+                        "context": context,
+                        "test_run_id": str(uuid.uuid4()),
+                        "test_timestamp": datetime.utcnow().isoformat(),
+                        "error": error,
+                    }
+                )
 
         print(f"✅ Completed {len(results)} test runs")
         return results
