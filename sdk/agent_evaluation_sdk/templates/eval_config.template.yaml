@@ -6,7 +6,7 @@ agent_name: "my-agent"
 
 # Agent Configuration
 agent:
-  model: "gemini-2.0-flash-exp"
+  model: "gemini-2.5-flash"
 
 # Logging Configuration
 logging:
@@ -31,7 +31,7 @@ dataset:
 # Gen AI Evaluation Configuration
 genai_eval:
   metrics: ["bleu", "rouge"]  # Automated metrics
-  model_name: "gemini-1.5-flash"  # Model for model-based evaluation
+  model_name: "gemini-2.5-flash"  # Model for model-based evaluation
   criteria: ["coherence", "fluency", "safety", "groundedness", "fulfillment"]  # Pointwise model-based evaluation criteria
   thresholds:   # Pass Rate Thresholds (0-1 scale) for a test case to be considered "passing"
     bleu: 0.5

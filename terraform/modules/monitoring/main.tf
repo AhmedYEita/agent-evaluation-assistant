@@ -126,68 +126,71 @@ resource "google_monitoring_dashboard" "agent_evaluation" {
   })
 }
 
-# Alert policy for high error rates
-resource "google_monitoring_alert_policy" "high_error_rate" {
-  display_name = "Agent Evaluation - High Error Rate"
-  combiner     = "OR"
+# Alert policies commented out - metrics must exist before creating alerts
+# Uncomment and re-apply after running the agent at least once to create the custom metrics
 
-  conditions {
-    display_name = "Error rate above 5%"
-
-    condition_threshold {
-      filter          = "metric.type=\"custom.googleapis.com/agent/errors\" resource.type=\"global\""
-      duration        = var.alert_duration
-      comparison      = "COMPARISON_GT"
-      threshold_value = var.error_rate_threshold
-
-      aggregations {
-        alignment_period   = var.metric_alignment_period
-        per_series_aligner = "ALIGN_RATE"
-      }
-    }
-  }
-
-  documentation {
-    content   = "Agent error rate has exceeded 5%. Check Cloud Logging for details."
-    mime_type = "text/markdown"
-  }
-
-  notification_channels = []
-
-  alert_strategy {
-    auto_close = var.alert_auto_close
-  }
-}
-
-# Alert policy for high latency
-resource "google_monitoring_alert_policy" "high_latency" {
-  display_name = "Agent Evaluation - High Latency"
-  combiner     = "OR"
-
-  conditions {
-    display_name = "Latency above 5 seconds"
-
-    condition_threshold {
-      filter          = "metric.type=\"custom.googleapis.com/agent/latency\" resource.type=\"global\""
-      duration        = var.alert_duration
-      comparison      = "COMPARISON_GT"
-      threshold_value = var.latency_threshold_ms
-
-      aggregations {
-        alignment_period   = var.metric_alignment_period
-        per_series_aligner = "ALIGN_MEAN"
-      }
-    }
-  }
-
-  documentation {
-    content   = "Agent response latency has exceeded 5 seconds. Check Cloud Trace for performance bottlenecks."
-    mime_type = "text/markdown"
-  }
-
-  notification_channels = []
-
-  alert_strategy {
-    auto_close = var.alert_auto_close
-  }
-}
+# # Alert policy for high error rates
+# resource "google_monitoring_alert_policy" "high_error_rate" {
+#   display_name = "Agent Evaluation - High Error Rate"
+#   combiner     = "OR"
+#
+#   conditions {
+#     display_name = "Error rate above 5%"
+#
+#     condition_threshold {
+#       filter          = "metric.type=\"custom.googleapis.com/agent/errors\" resource.type=\"global\""
+#       duration        = var.alert_duration
+#       comparison      = "COMPARISON_GT"
+#       threshold_value = var.error_rate_threshold
+#
+#       aggregations {
+#         alignment_period   = var.metric_alignment_period
+#         per_series_aligner = "ALIGN_RATE"
+#       }
+#     }
+#   }
+#
+#   documentation {
+#     content   = "Agent error rate has exceeded 5%. Check Cloud Logging for details."
+#     mime_type = "text/markdown"
+#   }
+#
+#   notification_channels = []
+#
+#   alert_strategy {
+#     auto_close = var.alert_auto_close
+#   }
+# }
+#
+# # Alert policy for high latency
+# resource "google_monitoring_alert_policy" "high_latency" {
+#   display_name = "Agent Evaluation - High Latency"
+#   combiner     = "OR"
+#
+#   conditions {
+#     display_name = "Latency above 5 seconds"
+#
+#     condition_threshold {
+#       filter          = "metric.type=\"custom.googleapis.com/agent/latency\" resource.type=\"global\""
+#       duration        = var.alert_duration
+#       comparison      = "COMPARISON_GT"
+#       threshold_value = var.latency_threshold_ms
+#
+#       aggregations {
+#         alignment_period   = var.metric_alignment_period
+#         per_series_aligner = "ALIGN_MEAN"
+#       }
+#     }
+#   }
+#
+#   documentation {
+#     content   = "Agent response latency has exceeded 5 seconds. Check Cloud Trace for performance bottlenecks."
+#     mime_type = "text/markdown"
+#   }
+#
+#   notification_channels = []
+#
+#   alert_strategy {
+#     auto_close = var.alert_auto_close
+#   }
+# }

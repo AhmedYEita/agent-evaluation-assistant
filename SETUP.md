@@ -169,7 +169,7 @@ terraform output
 ### Development Installation
 
 ```bash
-cd sdk
+cd ../sdk
 
 # Create virtual environment (recommended)
 python -m venv venv
@@ -269,7 +269,7 @@ open "https://console.cloud.google.com/traces?project=$(gcloud config get-value 
 
 **Filtering in Cloud Trace:**
 - Errors: `error:true` or `error.type:"ValueError"`
-- Model: `model:"gemini-2.0-flash-exp"`
+- Model: `model:"gemini-2.5-flash"`
 - Token usage: `total_tokens > 1000`
 - Link to logs: Use `interaction_id` attribute
 
@@ -312,7 +312,7 @@ from agent_evaluation_sdk import enable_evaluation
 
 # Your existing agent code
 agent = Agent(
-    model="gemini-2.0-flash-exp",
+    model="gemini-2.5-flash",
     system_instruction="You are a helpful assistant",
 )
 

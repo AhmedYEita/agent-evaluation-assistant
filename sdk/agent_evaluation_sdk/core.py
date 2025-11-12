@@ -1,16 +1,15 @@
-"""
-Core evaluation wrapper for Google ADK agents.
+"""Core evaluation wrapper for agents with automatic instrumentation."""
 
-Provides automatic instrumentation for logging, tracing, metrics, and dataset collection.
-"""
-
+import asyncio
+import atexit
 import functools
+import inspect
 import threading
 import time
 import uuid
-from contextlib import nullcontext
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Dict
 
 from agent_evaluation_sdk.config import EvaluationConfig
 from agent_evaluation_sdk.dataset import DatasetCollector
@@ -20,347 +19,540 @@ from agent_evaluation_sdk.tracing import CloudTracer
 
 
 class EvaluationWrapper:
-    """Wraps an ADK agent with evaluation capabilities."""
+    """Wraps ADK agents with evaluation capabilities. Supports all ADK methods automatically."""
 
     def __init__(self, agent: Any, config: EvaluationConfig):
-        """Initialize evaluation wrapper.
-
-        Args:
-            agent: The ADK agent to wrap
-            config: Evaluation configuration
-        """
         self.agent = agent
         self.config = config
-
-        # Initialize logger only if enabled
-        self.logger = None
-        if config.logging.enabled:
-            self.logger = CloudLogger(
-                project_id=config.project_id,
-                agent_name=config.agent_name,
-                log_level=config.logging.level,
+        self.logger = (
+            CloudLogger(config.project_id, config.agent_name, config.logging.level)
+            if config.logging.enabled
+            else None
+        )
+        self.tracer = (
+            CloudTracer(config.project_id, config.agent_name) if config.tracing.enabled else None
+        )
+        self.metrics = (
+            CloudMetrics(config.project_id, config.agent_name) if config.metrics.enabled else None
+        )
+        self.dataset_collector = (
+            DatasetCollector(
+                config.project_id,
+                config.agent_name,
+                config.dataset.storage_location,
+                config.dataset.buffer_size,
             )
+            if config.dataset.auto_collect
+            else None
+        )
 
-        # Initialize tracer only if enabled
-        self.tracer = None
-        if config.tracing.enabled:
-            self.tracer = CloudTracer(
-                project_id=config.project_id,
-                agent_name=config.agent_name,
-            )
-
-        # Initialize metrics only if enabled
-        self.metrics = None
-        if config.metrics.enabled:
-            self.metrics = CloudMetrics(
-                project_id=config.project_id,
-                agent_name=config.agent_name,
-            )
-
-        # Initialize dataset collector only if auto_collect is enabled
-        self.dataset_collector = None
-        if config.dataset.auto_collect:
-            self.dataset_collector = DatasetCollector(
-                project_id=config.project_id,
-                agent_name=config.agent_name,
-                storage_location=config.dataset.storage_location,
-                buffer_size=config.dataset.buffer_size,
-            )
-
-        # Thread-local storage for trace context (for tool tracing)
         self._trace_context = threading.local()
-
-        # Wrap agent methods
+        max_workers = getattr(config, "executor_workers", 4)
+        self._executor = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="eval_bg_")
+        self._shutdown_called = False
+        self._original_methods: Dict[str, Callable] = {}
+        atexit.register(self._shutdown)
         self._wrap_agent()
 
         print(f"✅ Evaluation enabled for agent: {config.agent_name}")
-
-        if config.logging.enabled:
-            print("   - Logging: Cloud Logging initialized")
-        else:
-            print("   - Logging: Disabled")
-
-        if config.tracing.enabled:
-            print("   - Tracing: Cloud Trace initialized")
-        else:
-            print("   - Tracing: Disabled")
-
-        if config.metrics.enabled:
-            print("   - Metrics: Cloud Monitoring initialized")
-        else:
-            print("   - Metrics: Disabled")
-
-        if config.dataset.auto_collect:
-            print("   - Dataset Collection: Enabled")
-        else:
-            print("   - Dataset Collection: Disabled")
+        print(f"   - Logging: {'Enabled' if config.logging.enabled else 'Disabled'}")
+        print(f"   - Tracing: {'Enabled' if config.tracing.enabled else 'Disabled'}")
+        print(f"   - Metrics: {'Enabled' if config.metrics.enabled else 'Disabled'}")
+        print(f"   - Dataset: {'Enabled' if config.dataset.auto_collect else 'Disabled'}")
 
     def _wrap_agent(self) -> None:
-        """Replace the ADK agent's generate_content method with the evaluation wrapped version."""
-        if not hasattr(self.agent, "generate_content"):
+        methods = [
+            m for m in ["generate_content", "run_async", "run", "invoke"] if hasattr(self.agent, m)
+        ]
+        if not methods:
             raise ValueError(
-                "Agent must have a 'generate_content' method. "
-                "This SDK currently supports Google ADK agents only."
+                "Agent must have at least one of: generate_content, run, run_async, or invoke"
             )
 
-        original_method = self.agent.generate_content
-        self.agent.generate_content = self._wrap_generate_content(original_method)
+        # Check if agent is a Pydantic model
+        try:
+            from pydantic import BaseModel
 
-    def _wrap_generate_content(self, original_method: Callable) -> Callable:
-        """Wrap the original method with logging, tracing, metrics, and dataset collection.
+            is_pydantic = isinstance(self.agent, BaseModel)
+        except ImportError:
+            is_pydantic = False
 
-        Args:
-            original_method: The original agent method to wrap
+        for method_name in methods:
+            original = getattr(self.agent, method_name)
+            # Check if it's an async generator function
+            is_async_gen = inspect.isasyncgenfunction(original)
+            if method_name == "run_async" or asyncio.iscoroutinefunction(original):
+                wrapper = (
+                    self._wrap_async_generator(original)
+                    if is_async_gen
+                    else self._wrap_async_method(original)
+                )
+            else:
+                wrapper = self._wrap_sync_method(original)
+            self._original_methods[method_name] = original
 
-        Returns:
-            Wrapped method that adds logging, tracing, metrics, and dataset collection
-        """
+            # Use object.__setattr__ to bypass Pydantic validation for Pydantic models
+            if is_pydantic:
+                object.__setattr__(self.agent, method_name, wrapper)
+            else:
+                setattr(self.agent, method_name, wrapper)
+
+    def _wrap_async_generator(self, original_method: Callable) -> Callable:
+        """Wrap an async generator method (e.g., runner.run_async)."""
 
         @functools.wraps(original_method)
-        def wrapped(*args, **kwargs):
+        async def wrapped(*args, **kwargs):
             interaction_id = str(uuid.uuid4())
-            input_data = args[0] if args else kwargs.get("prompt", kwargs.get("input", ""))
-            start_time = time.time()
+            # Extract input from new_message Content object
+            input_data = ""
+            if kwargs.get("new_message"):
+                msg = kwargs["new_message"]
+                if hasattr(msg, "parts") and msg.parts:
+                    input_data = " ".join(
+                        part.text for part in msg.parts if hasattr(part, "text") and part.text
+                    )
+                elif hasattr(msg, "text"):
+                    input_data = msg.text
+            elif args:
+                input_data = str(args[0])
 
-            # Execute agent with tracing, logging, metrics, and dataset collection
+            trace_id, parent_span_id = None, None
+            if self.tracer:
+                trace_id = self.tracer.generate_trace_id()
+                parent_span_id = uuid.uuid4().hex[:16]
+                # Set trace context BEFORE calling the generator so tools can access it
+                self._trace_context.context = (trace_id, parent_span_id)
+
             try:
-                if self.tracer:
-                    trace_id = self.tracer.generate_trace_id()
-                    # Parent span: Overall agent interaction
-                    with self.tracer.span(
-                        name="agent.generate_content",
-                        attributes={
-                            "interaction_id": interaction_id,
-                            "model": self.config.agent.model,
-                            "input_length": len(str(input_data)),
-                        },
-                        trace_id=trace_id,
-                    ) as (trace_id, parent_span_id):
-                        # Store trace context for tool tracing (thread-safe)
-                        self._trace_context.context = (trace_id, parent_span_id)
+                start = time.time()
+                final_response = None
 
-                        try:
-                            # Child span: LLM API call
-                            with self.tracer.span(
-                                name="llm.generate",
-                                attributes={"model": self.config.agent.model},
-                                trace_id=trace_id,
-                                parent_span_id=parent_span_id,
-                            ):
-                                response = original_method(*args, **kwargs)
+                async for item in original_method(*args, **kwargs):
+                    final_response = item
+                    yield item
 
-                            # Child span: Post-processing
-                            with self.tracer.span(
-                                name="processing.extract",
-                                trace_id=trace_id,
-                                parent_span_id=parent_span_id,
-                            ):
-                                output_data = self._extract_output(response)
-                                metadata = self._extract_metadata(response)
-                        finally:
-                            # Clear trace context (thread-safe)
-                            self._trace_context.context = None
-                else:
-                    response = original_method(*args, **kwargs)
-                    output_data = self._extract_output(response)
-                    metadata = self._extract_metadata(response)
+                duration_ms = (time.time() - start) * 1000
+                output_data = self._extract_output(final_response) if final_response else ""
+                metadata = self._extract_metadata(final_response) if final_response else {}
 
-                # Calculate duration
-                duration_ms = (time.time() - start_time) * 1000
-
-                # Log successful interaction
-                if self.logger and self.config.logging.include_trajectories:
-                    # Conditionally wrap in tracing span
-                    span_context = (
-                        self.tracer.span(
-                            name="logging.write",
-                            trace_id=trace_id,
-                            parent_span_id=parent_span_id,
-                        )
-                        if self.tracer
-                        else nullcontext()
+                if not self._shutdown_called:
+                    self._submit_observability(
+                        trace_id,
+                        parent_span_id,
+                        interaction_id,
+                        input_data,
+                        output_data,
+                        duration_ms,
+                        metadata,
+                        start,
                     )
-                    with span_context:
-                        self.logger.log_interaction(
-                            interaction_id=interaction_id,
-                            input_data=input_data,
-                            output_data=output_data,
-                            duration_ms=duration_ms,
-                            metadata=metadata,
-                        )
-
-                # Record success metrics
-                if self.metrics:
-                    self.metrics.record_latency(duration_ms)
-                    self.metrics.record_success()
-                    if metadata.get("input_tokens") and metadata.get("output_tokens"):
-                        self.metrics.record_token_count(
-                            input_tokens=metadata["input_tokens"],
-                            output_tokens=metadata["output_tokens"],
-                        )
-
-                # Collect for test dataset
-                if self.dataset_collector:
-                    self.dataset_collector.add_interaction(
-                        interaction_id=interaction_id,
-                        input_data=input_data,
-                        output_data=output_data,
-                        metadata=metadata,
-                    )
-
-                return response
-
             except Exception as e:
-                # Log and record error, then re-raise
-                duration_ms = (time.time() - start_time) * 1000
-
-                if self.logger:
-                    self.logger.log_error(
-                        interaction_id=interaction_id,
-                        error=e,
-                        context={
-                            "input": str(input_data)[:500],
-                            "duration_ms": duration_ms,
-                        },
+                duration_ms = (time.time() - start) * 1000
+                error_msg = str(e)
+                if not self._shutdown_called:
+                    self._submit_observability(
+                        trace_id,
+                        parent_span_id,
+                        interaction_id,
+                        input_data,
+                        f"ERROR: {error_msg}",
+                        duration_ms,
+                        {"error": True, "error_type": type(e).__name__},
+                        start,
+                        is_error=True,
                     )
-
-                if self.metrics:
-                    self.metrics.record_error(error_type=type(e).__name__)
-
                 raise
+            finally:
+                if self.tracer:
+                    self._trace_context.context = None
 
         return wrapped
 
-    def _extract_output(self, response: Any) -> Any:
-        """Extract output from agent response.
+    def _wrap_async_method(self, original_method: Callable) -> Callable:
+        @functools.wraps(original_method)
+        async def wrapped(*args, **kwargs):
+            interaction_id = str(uuid.uuid4())
+            input_data = (
+                args[0]
+                if args
+                else kwargs.get("prompt")
+                or kwargs.get("input")
+                or kwargs.get("message")
+                or kwargs.get("new_message")
+                or ""
+            )
 
-        Args:
-            response: Agent response object
+            trace_id, parent_span_id = None, None
+            if self.tracer:
+                trace_id = self.tracer.generate_trace_id()
+                parent_span_id = uuid.uuid4().hex[:16]
+                self._trace_context.context = (trace_id, parent_span_id)
 
-        Returns:
-            Extracted output (text or structured data)
-        """
-        # Handle different response types
+            try:
+                start = time.time()
+                response = await original_method(*args, **kwargs)
+                duration_ms = (time.time() - start) * 1000
+
+                output_data = self._extract_output(response)
+                metadata = self._extract_metadata(response)
+
+                if not self._shutdown_called:
+                    self._submit_observability(
+                        trace_id,
+                        parent_span_id,
+                        interaction_id,
+                        input_data,
+                        output_data,
+                        duration_ms,
+                        metadata,
+                        start,
+                    )
+
+                return response
+            except Exception as e:
+                duration_ms = (time.time() - start) * 1000
+                error_msg = str(e)
+                if not self._shutdown_called:
+                    self._submit_observability(
+                        trace_id,
+                        parent_span_id,
+                        interaction_id,
+                        input_data,
+                        f"ERROR: {error_msg}",
+                        duration_ms,
+                        {"error": True, "error_type": type(e).__name__},
+                        start,
+                        is_error=True,
+                    )
+                raise
+            finally:
+                if self.tracer:
+                    self._trace_context.context = None
+
+        return wrapped
+
+    def _wrap_sync_method(self, original_method: Callable) -> Callable:
+        @functools.wraps(original_method)
+        def wrapped(*args, **kwargs):
+            interaction_id = str(uuid.uuid4())
+            input_data = (
+                args[0]
+                if args
+                else kwargs.get("prompt") or kwargs.get("input") or kwargs.get("message") or ""
+            )
+
+            trace_id, parent_span_id = None, None
+            if self.tracer:
+                trace_id = self.tracer.generate_trace_id()
+                parent_span_id = uuid.uuid4().hex[:16]
+                self._trace_context.context = (trace_id, parent_span_id)
+
+            try:
+                start = time.time()
+                response = original_method(*args, **kwargs)
+                duration_ms = (time.time() - start) * 1000
+
+                output_data = self._extract_output(response)
+                metadata = self._extract_metadata(response)
+
+                if not self._shutdown_called:
+                    self._submit_observability(
+                        trace_id,
+                        parent_span_id,
+                        interaction_id,
+                        input_data,
+                        output_data,
+                        duration_ms,
+                        metadata,
+                        start,
+                    )
+
+                return response
+            finally:
+                if self.tracer:
+                    self._trace_context.context = None
+
+        return wrapped
+
+    def _submit_observability(
+        self,
+        trace_id,
+        parent_span_id,
+        interaction_id,
+        input_data,
+        output_data,
+        duration_ms,
+        metadata,
+        start,
+        is_error=False,
+    ):
+        def safe_submit(func, *args):
+            try:
+                self._executor.submit(func, *args)
+            except RuntimeError:
+                pass
+
+        if self.tracer and trace_id:
+            safe_submit(
+                self._send_trace_spans,
+                trace_id,
+                parent_span_id,
+                interaction_id,
+                input_data,
+                output_data,
+                start,
+                start + duration_ms / 1000,
+                start,
+                start,
+            )
+
+        if self.logger and self.config.logging.include_trajectories:
+            safe_submit(
+                self._send_log, interaction_id, input_data, output_data, duration_ms, metadata
+            )
+
+        if self.metrics:
+            safe_submit(self._send_metrics, duration_ms, metadata, is_error)
+
+        if self.dataset_collector:
+            safe_submit(self._send_dataset, interaction_id, input_data, output_data, metadata)
+
+    def _send_trace_spans(
+        self,
+        trace_id,
+        parent_span_id,
+        interaction_id,
+        input_data,
+        output_data,
+        llm_start,
+        llm_end,
+        extract_start,
+        extract_end,
+    ):
+        try:
+            query_preview, response_preview = str(input_data)[:200], str(output_data)[:200]
+            attrs = {
+                "interaction_id": interaction_id,
+                "model": self.config.agent.model,
+                "query": query_preview,
+                "response": response_preview,
+                "input_length": len(str(input_data)),
+                "output_length": len(str(output_data)),
+            }
+            self.tracer._send_span(
+                trace_id, parent_span_id, "agent.generate_content", llm_start, extract_end, attrs
+            )
+            self.tracer._send_span(
+                trace_id,
+                uuid.uuid4().hex[:16],
+                "llm.generate",
+                llm_start,
+                llm_end,
+                {"model": self.config.agent.model, "query": query_preview},
+                parent_span_id,
+            )
+            self.tracer._send_span(
+                trace_id,
+                uuid.uuid4().hex[:16],
+                "processing.extract",
+                extract_start,
+                extract_end,
+                {},
+                parent_span_id,
+            )
+        except Exception as e:
+            print(f"Warning: Failed to send trace spans: {e}")
+
+    def _send_log(self, interaction_id, input_data, output_data, duration_ms, metadata):
+        try:
+            self.logger.log_interaction(
+                interaction_id, input_data, output_data, duration_ms, metadata
+            )
+        except Exception as e:
+            print(f"Warning: Failed to send log: {e}")
+
+    def _send_metrics(self, duration_ms, metadata, is_error=False):
+        try:
+            if is_error:
+                error_type = metadata.get("error_type", "UnknownError")
+                self.metrics.record_error(error_type)
+            else:
+                self.metrics.record_latency(duration_ms)
+                self.metrics.record_success()
+                if metadata.get("input_tokens") and metadata.get("output_tokens"):
+                    self.metrics.record_token_count(
+                        metadata["input_tokens"], metadata["output_tokens"]
+                    )
+        except Exception as e:
+            print(f"Warning: Failed to send metrics: {e}")
+
+    def _send_dataset(self, interaction_id, input_data, output_data, metadata):
+        try:
+            self.dataset_collector.add_interaction(
+                interaction_id, input_data, output_data, metadata
+            )
+        except Exception as e:
+            print(f"Warning: Failed to add dataset entry: {e}")
+
+    def _extract_output(self, response):
         if isinstance(response, str):
             return response
-        elif hasattr(response, "text"):
+        if hasattr(response, "text"):
             return response.text
-        elif hasattr(response, "content"):
-            return response.content
-        elif hasattr(response, "candidates"):
-            # ADK/Gemini response format
-            if response.candidates:
-                candidate = response.candidates[0]
-                if hasattr(candidate, "content"):
-                    if hasattr(candidate.content, "parts"):
-                        return " ".join(
-                            part.text for part in candidate.content.parts if hasattr(part, "text")
-                        )
-
-        # Fallback: return string representation
+        # Handle ADK event objects (events have content.parts)
+        if hasattr(response, "content"):
+            content = response.content
+            if hasattr(content, "parts") and content.parts:
+                # Extract text from all text parts
+                texts = []
+                for part in content.parts:
+                    if hasattr(part, "text") and part.text:
+                        texts.append(part.text)
+                if texts:
+                    return " ".join(texts)
+            if isinstance(content, str):
+                return content
+            return getattr(content, "text", "")
+        if hasattr(response, "candidates") and response.candidates:
+            candidate = response.candidates[0]
+            if hasattr(candidate, "content"):
+                if hasattr(candidate.content, "parts"):
+                    return " ".join(
+                        part.text for part in candidate.content.parts if hasattr(part, "text")
+                    )
+                return getattr(candidate.content, "text", "")
+        if isinstance(response, dict):
+            for key in ["output", "response", "text", "content", "message"]:
+                if key in response:
+                    return str(response[key])
         return str(response)
 
-    def _extract_metadata(self, response: Any) -> dict:
-        """Extract metadata from agent response.
-
-        Args:
-            response: Agent response object
-
-        Returns:
-            Dictionary of metadata (token counts, model info)
-        """
+    def _extract_metadata(self, response):
         metadata = {}
-
-        # Extract token usage (Gemini/ADK response format)
         if hasattr(response, "usage_metadata"):
             usage = response.usage_metadata
             metadata["input_tokens"] = getattr(usage, "prompt_token_count", None)
             metadata["output_tokens"] = getattr(usage, "candidates_token_count", None)
             metadata["total_tokens"] = getattr(usage, "total_token_count", None)
-
-        # Extract model name
+        if isinstance(response, dict) and "metadata" in response:
+            metadata.update(response["metadata"])
+        if hasattr(response, "prompt_token_count"):
+            metadata["input_tokens"] = response.prompt_token_count
+        if hasattr(response, "candidates_token_count"):
+            metadata["output_tokens"] = response.candidates_token_count
+        if hasattr(response, "total_token_count"):
+            metadata["total_tokens"] = response.total_token_count
         if hasattr(response, "model"):
             metadata["model"] = response.model
-
-        # Remove None values
+        elif isinstance(response, dict) and "model" in response:
+            metadata["model"] = response["model"]
         return {k: v for k, v in metadata.items() if v is not None}
 
-    def flush(self) -> None:
-        """Flush any buffered data (e.g., dataset samples)."""
+    def flush(self):
         if self.dataset_collector:
             self.dataset_collector.flush()
 
-    def tool_trace(self, tool_name: str):
-        """Decorator for tracing tool execution within agent calls.
+    def shutdown(self):
+        """Public method for graceful shutdown.
 
-        Usage:
-            @wrapper.tool_trace("search")
-            def search_tool(query: str):
-                return search_api(query)
-
-        Args:
-            tool_name: Name of the tool (e.g., "search", "calculator")
-
-        Returns:
-            Decorator function
+        Flushes pending data and shuts down background threads.
         """
+        if self._shutdown_called:
+            return
+        self._shutdown_called = True
+        try:
+            self._executor.shutdown(wait=True, timeout=10.0)
+            self.flush()
+        except Exception:
+            pass
 
+    def _shutdown(self):
+        """Private method for internal use (atexit, __del__)."""
+        self.shutdown()
+
+    def tool_trace(self, tool_name):
         def decorator(func):
             @functools.wraps(func)
             def wrapped(*args, **kwargs):
-                # Get trace context from thread-local storage
                 trace_context = getattr(self._trace_context, "context", None)
-                if self.tracer and trace_context:
-                    trace_id, parent_span_id = trace_context
-                    with self.tracer.span(
-                        name=f"tool.{tool_name}",
-                        trace_id=trace_id,
-                        parent_span_id=parent_span_id,
-                    ):
-                        return func(*args, **kwargs)
-                else:
-                    # No-op if tracing disabled or not in agent context
+                if not (self.tracer and trace_context):
                     return func(*args, **kwargs)
+
+                trace_id, parent_span_id = trace_context
+                start = time.time()
+                try:
+                    result = func(*args, **kwargs)
+                    if not self._shutdown_called:
+                        try:
+                            self._executor.submit(
+                                self._send_tool_span,
+                                trace_id,
+                                parent_span_id,
+                                tool_name,
+                                start,
+                                time.time(),
+                                None,
+                            )
+                        except RuntimeError:
+                            pass
+                    return result
+                except Exception as e:
+                    if not self._shutdown_called:
+                        try:
+                            self._executor.submit(
+                                self._send_tool_span,
+                                trace_id,
+                                parent_span_id,
+                                tool_name,
+                                start,
+                                time.time(),
+                                e,
+                            )
+                        except RuntimeError:
+                            pass
+                    raise
 
             return wrapped
 
         return decorator
 
-    def __del__(self):
-        """Cleanup when wrapper is destroyed."""
+    def _send_tool_span(
+        self, trace_id, parent_span_id, tool_name, start_time, end_time, error=None
+    ):
         try:
-            self.flush()
-        except Exception:  # noqa: S110
+            attrs = (
+                {
+                    "error": True,
+                    "error.type": type(error).__name__,
+                    "error.message": str(error)[:256],
+                }
+                if error
+                else {}
+            )
+            self.tracer._send_span(
+                trace_id,
+                uuid.uuid4().hex[:16],
+                f"tool.{tool_name}",
+                start_time,
+                end_time,
+                attrs,
+                parent_span_id,
+            )
+        except Exception as e:
+            print(f"Warning: Failed to send tool span: {e}")
+
+    def __del__(self):
+        try:
+            self._shutdown()
+        except Exception:
             pass
 
 
-def enable_evaluation(
-    agent: Any,
-    project_id: str,
-    agent_name: str,
-    config_path: Optional[str] = None,
-) -> EvaluationWrapper:
-    """Enable evaluation for an ADK agent with a single function call.
-
-    Args:
-        agent: The ADK agent instance to enable evaluation for
-        project_id: GCP project ID
-        agent_name: Name for your agent (used in logging/metrics)
-        config_path: Optional path to YAML config file
-
-    Returns:
-        EvaluationWrapper instance (you can ignore this in most cases)
-    """
-    # Load config
+def enable_evaluation(agent, project_id, agent_name, config_path=None):
     if config_path:
         config = EvaluationConfig.from_yaml(Path(config_path))
-        # Override with provided values
         config.project_id = project_id
         config.agent_name = agent_name
     else:
         config = EvaluationConfig.default(project_id=project_id, agent_name=agent_name)
-
-    # Create and return wrapper
-    wrapper = EvaluationWrapper(agent=agent, config=config)
-
-    return wrapper
+    return EvaluationWrapper(agent, config)

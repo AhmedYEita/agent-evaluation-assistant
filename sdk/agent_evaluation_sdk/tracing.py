@@ -31,6 +31,41 @@ class CloudTracer:
         """Generate and return a new trace ID."""
         return uuid.uuid4().hex
 
+    def create_span_data(
+        self,
+        name: str,
+        start_time: float,
+        end_time: float,
+        attributes: Optional[Dict[str, Any]] = None,
+        trace_id: Optional[str] = None,
+        parent_span_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Create span data without sending it (for background processing).
+
+        Args:
+            name: Span name
+            start_time: Start timestamp
+            end_time: End timestamp
+            attributes: Span attributes
+            trace_id: Trace ID (generated if not provided)
+            parent_span_id: Parent span ID for nested spans
+
+        Returns:
+            Dictionary containing all span data for later sending
+        """
+        trace_id = trace_id or self.generate_trace_id()
+        span_id = uuid.uuid4().hex[:16]
+
+        return {
+            "trace_id": trace_id,
+            "span_id": span_id,
+            "name": name,
+            "start_time": start_time,
+            "end_time": end_time,
+            "attributes": attributes or {},
+            "parent_span_id": parent_span_id,
+        }
+
     @contextmanager
     def span(
         self,
@@ -119,7 +154,7 @@ class CloudTracer:
 
             # Create and send span
             span = Span(**span_config)
-            self.client.create_span(name=span.name, span=span)  # type: ignore[call-arg]
+            self.client.create_span(request=span)  # type: ignore[call-arg]
 
         except Exception as e:
             # Don't fail the agent if tracing fails

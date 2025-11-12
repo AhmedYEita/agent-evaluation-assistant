@@ -12,9 +12,10 @@ This example demonstrates how to integrate the agent evaluation SDK with an ADK 
 
 **Features:**
 - ✅ Easy integration (just a few lines of code)
+- ✅ Zero-latency observability (background processing)
 - ✅ Automatic logging, tracing, and metrics
+- ✅ Tool tracing with decorator
 - ✅ Dataset collection for testing
-- ✅ Tool tracing (search, calculator)
 - ✅ Evaluation with Gen AI Evaluation Service
 
 ## Quick Start
@@ -28,7 +29,7 @@ project_id: "your-gcp-project-id"
 agent_name: "my-agent"
 
 agent:
-  model: "gemini-2.0-flash-exp"
+  model: "gemini-2.5-flash"
 
 # Enable/disable features as needed
 logging:
@@ -60,6 +61,9 @@ gcloud auth application-default login
 ```bash
 # Interactive mode - chat with your agent
 python agent.py
+
+# Test suite - generate evaluation dataset
+python test_queries.py
 
 # Evaluation mode - test agent on dataset
 python run_evaluation.py
