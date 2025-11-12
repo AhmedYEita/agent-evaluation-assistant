@@ -149,7 +149,7 @@ def main():
         except Exception as e:
             print(f"Error: {e}\n")
 
-    wrapper._shutdown()
+    wrapper.shutdown()
     print("\n👋 Goodbye!")
 
 

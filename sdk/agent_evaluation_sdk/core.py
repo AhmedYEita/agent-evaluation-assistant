@@ -47,7 +47,8 @@ class EvaluationWrapper:
         )
 
         self._trace_context = threading.local()
-        self._executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="eval_bg_")
+        max_workers = getattr(config, "executor_workers", 4)
+        self._executor = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="eval_bg_")
         self._shutdown_called = False
         self._original_methods: Dict[str, Callable] = {}
         atexit.register(self._shutdown)
@@ -145,6 +146,22 @@ class EvaluationWrapper:
                         metadata,
                         start,
                     )
+            except Exception as e:
+                duration_ms = (time.time() - start) * 1000
+                error_msg = str(e)
+                if not self._shutdown_called:
+                    self._submit_observability(
+                        trace_id,
+                        parent_span_id,
+                        interaction_id,
+                        input_data,
+                        f"ERROR: {error_msg}",
+                        duration_ms,
+                        {"error": True, "error_type": type(e).__name__},
+                        start,
+                        is_error=True,
+                    )
+                raise
             finally:
                 if self.tracer:
                     self._trace_context.context = None
@@ -192,6 +209,22 @@ class EvaluationWrapper:
                     )
 
                 return response
+            except Exception as e:
+                duration_ms = (time.time() - start) * 1000
+                error_msg = str(e)
+                if not self._shutdown_called:
+                    self._submit_observability(
+                        trace_id,
+                        parent_span_id,
+                        interaction_id,
+                        input_data,
+                        f"ERROR: {error_msg}",
+                        duration_ms,
+                        {"error": True, "error_type": type(e).__name__},
+                        start,
+                        is_error=True,
+                    )
+                raise
             finally:
                 if self.tracer:
                     self._trace_context.context = None
@@ -251,6 +284,7 @@ class EvaluationWrapper:
         duration_ms,
         metadata,
         start,
+        is_error=False,
     ):
         def safe_submit(func, *args):
             try:
@@ -278,7 +312,7 @@ class EvaluationWrapper:
             )
 
         if self.metrics:
-            safe_submit(self._send_metrics, duration_ms, metadata, False)
+            safe_submit(self._send_metrics, duration_ms, metadata, is_error)
 
         if self.dataset_collector:
             safe_submit(self._send_dataset, interaction_id, input_data, output_data, metadata)
@@ -340,7 +374,8 @@ class EvaluationWrapper:
     def _send_metrics(self, duration_ms, metadata, is_error=False):
         try:
             if is_error:
-                self.metrics.record_error("UnknownError")
+                error_type = metadata.get("error_type", "UnknownError")
+                self.metrics.record_error(error_type)
             else:
                 self.metrics.record_latency(duration_ms)
                 self.metrics.record_success()
@@ -417,7 +452,11 @@ class EvaluationWrapper:
         if self.dataset_collector:
             self.dataset_collector.flush()
 
-    def _shutdown(self):
+    def shutdown(self):
+        """Public method for graceful shutdown.
+
+        Flushes pending data and shuts down background threads.
+        """
         if self._shutdown_called:
             return
         self._shutdown_called = True
@@ -426,6 +465,10 @@ class EvaluationWrapper:
             self.flush()
         except Exception:
             pass
+
+    def _shutdown(self):
+        """Private method for internal use (atexit, __del__)."""
+        self.shutdown()
 
     def tool_trace(self, tool_name):
         def decorator(func):

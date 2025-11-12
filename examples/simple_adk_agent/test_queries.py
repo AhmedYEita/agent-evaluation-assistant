@@ -99,7 +99,7 @@ def run_test_queries():
     print(f"⏱️  Average response time: {avg_duration:.0f}ms")
 
     # Clean shutdown before script ends
-    wrapper._shutdown()
+    wrapper.shutdown()
 
     print("\n" + "=" * 70)
     print("✅ Test complete! Dataset ready for evaluation.")

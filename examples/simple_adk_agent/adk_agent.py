@@ -110,7 +110,7 @@ async def main():
     
     # Flush before shutdown to ensure all data is written
     wrapper.flush()
-    wrapper._shutdown()
+    wrapper.shutdown()
     
     print("\n" + "=" * 70)
     print("✅ Test complete!")

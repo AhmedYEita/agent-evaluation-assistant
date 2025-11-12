@@ -47,6 +47,8 @@ class DatasetCollector:
         # In-memory buffer for batch writes
         self.buffer: List[Dict[str, Any]] = []
         self.buffer_size = buffer_size
+        self._retry_counts: Dict[str, int] = {}  # Track retry counts per entry
+        self._max_retries = 3  # Maximum retries before discarding
 
     def add_interaction(
         self,
@@ -139,8 +141,18 @@ class DatasetCollector:
 
         except Exception as e:
             print(f"Warning: Failed to write dataset entries: {e}")
-            # Re-add failed entries to buffer for retry
-            self.buffer.extend(buffer_to_write)
+            # Re-add failed entries to buffer for retry (with retry limit)
+            for entry in buffer_to_write:
+                entry_id = entry.get("interaction_id", str(id(entry)))
+                retry_count = self._retry_counts.get(entry_id, 0)
+                if retry_count < self._max_retries:
+                    self._retry_counts[entry_id] = retry_count + 1
+                    self.buffer.append(entry)
+                else:
+                    print(
+                        f"Warning: Discarding entry {entry_id} "
+                        f"after {self._max_retries} failed retries"
+                    )
 
     def _ensure_table_exists(self) -> None:
         """Create BigQuery table for test dataset if it doesn't exist."""

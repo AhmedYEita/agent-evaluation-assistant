@@ -173,5 +173,11 @@ class CloudMetrics:
             self._last_write_time[metric_key] = now
         except Exception as e:
             # Silently ignore rate limit errors, warn on others
-            if "more frequently than the maximum sampling period" not in str(e):
+            # Check for InvalidArgument with rate limit message
+            from google.api_core import exceptions as api_exceptions
+
+            is_rate_limit = isinstance(
+                e, api_exceptions.InvalidArgument
+            ) and "more frequently than the maximum sampling period" in str(e)
+            if not is_rate_limit:
                 print(f"Warning: Failed to write metric: {e}")

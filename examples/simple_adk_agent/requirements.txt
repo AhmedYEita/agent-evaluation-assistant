@@ -1,3 +1,4 @@
-google-genai
+google-genai>=1.0.0,<2.0.0
+google-adk>=1.0.0,<2.0.0
 agent-evaluation-sdk
 
