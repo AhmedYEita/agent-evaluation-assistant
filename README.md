@@ -25,33 +25,34 @@ terraform init
 terraform apply -var="project_id=GCP_PROJECT_ID"
 ```
 
-### 2. Configure Your Agent (eval_config.yaml)
+### 2. Configure Your Setup
+
+**Agent Config** (`agent_config.yaml`):
 ```yaml
 project_id: "GCP_PROJECT_ID"
 agent_name: "my-agent"
-
-agent:
-  model: "gemini-2.5-flash"
-
-logging:
-  enabled: true       # Set to false to disable logging
-tracing:
-  enabled: true       # Set to false to disable tracing
-metrics:
-  enabled: true       # Set to false to disable metrics
-dataset:
-  auto_collect: false # Enable dataset collection
+model: "gemini-2.5-flash"
 ```
 
-### 3. Enable Evaluation (3 lines!)
-```python
-from google.genai.adk import Agent
-from agent_evaluation_sdk import enable_evaluation
-from agent_evaluation_sdk.config import EvaluationConfig
+**SDK Config** (`eval_config.yaml`):
+```yaml
+logging:
+  enabled: true
+tracing:
+  enabled: true
+dataset:
+  auto_collect: false
+```
 
-config = EvaluationConfig.from_yaml(Path("eval_config.yaml"))
-agent = Agent(model=config.agent.model, system_instruction=config.agent.system_instruction)
-enable_evaluation(agent, config.project_id, config.agent_name, config=config)
+### 3. Enable Evaluation (1 line!)
+```python
+from agent_evaluation_sdk import enable_evaluation
+
+# Your agent setup
+agent = YourAgent(...)
+
+# Enable evaluation
+wrapper = enable_evaluation(agent, "GCP_PROJECT_ID", "my-agent", "eval_config.yaml")
 ```
 
 ## ✨ What You Get
@@ -87,7 +88,7 @@ Run `python run_evaluation.py` to test your agent:
 ```bash
 # 1. Enable dataset collection in eval_config.yaml
 # 2. Run agent - interactions auto-collect to BigQuery
-python agent.py
+python custom_agent.py --test
 
 # 3. Review in BigQuery - update 'reference' field, set 'reviewed = TRUE'
 # 4. Run evaluation test
@@ -117,8 +118,11 @@ See [SETUP.md](./SETUP.md#agent-testing--evaluation) for details.
 │   └── tests/                   # Unit & integration tests
 ├── terraform/                   # Infrastructure as Code
 │   └── modules/                 # GCP services modules
-├── examples/                    # Working examples
-│   └── simple_adk_agent/        # Demo agent
+├── example_agents/              # Working examples
+│   ├── custom_agent.py          # Custom agent example
+│   ├── adk_agent.py             # ADK agent example
+│   ├── agent_config.yaml        # Agent-specific config
+│   └── eval_config.yaml         # SDK config
 └── .github/workflows/           # CI/CD pipelines
 ```
 
@@ -126,7 +130,7 @@ See [SETUP.md](./SETUP.md#agent-testing--evaluation) for details.
 
 - **[SETUP.md](./SETUP.md)** - Complete setup and deployment guide
 - **[CONTRIBUTING.md](./CONTRIBUTING.md)** - Development and contribution guidelines
-- **[examples/](./examples/)** - Working code samples
+- **[example_agents/](./example_agents/)** - Working code samples
 
 ## 📄 License
 

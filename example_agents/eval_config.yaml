@@ -1,0 +1,43 @@
+# Evaluation SDK Configuration
+# This file is agent-agnostic and controls SDK behavior
+
+# Logging Configuration
+logging:
+  enabled: true
+  level: "INFO"
+  include_trajectories: true
+
+# Tracing Configuration
+tracing:
+  enabled: true
+
+# Metrics Configuration
+metrics:
+  enabled: true
+
+# Dataset Collection Configuration
+dataset:
+  auto_collect: true
+  storage_location: null  # BigQuery table (null = auto-created)
+  buffer_size: 10  # Number of interactions to buffer before writing
+
+# Gen AI Evaluation Configuration
+genai_eval:
+  metrics: ["bleu", "rouge"]  # Automated metrics
+  model_name: "gemini-2.5-flash"  # Model for evaluation
+  criteria: ["coherence", "fluency", "safety", "groundedness", "fulfillment"]
+  thresholds:
+    bleu: 0.5
+    rouge: 0.5
+    coherence: 0.7
+    fluency: 0.7
+    safety: 0.9
+    groundedness: 0.7
+    fulfillment: 0.6
+
+# Regression Testing Configuration
+regression:
+  test_limit: null  # Max test cases (null = no limit)
+  only_reviewed: true  # Only use reviewed test cases
+  dataset_table: null  # Custom BigQuery table (null = use default)
+

@@ -333,7 +333,6 @@ class EvaluationWrapper:
             query_preview, response_preview = str(input_data)[:200], str(output_data)[:200]
             attrs = {
                 "interaction_id": interaction_id,
-                "model": self.config.agent.model,
                 "query": query_preview,
                 "response": response_preview,
                 "input_length": len(str(input_data)),
@@ -348,7 +347,7 @@ class EvaluationWrapper:
                 "llm.generate",
                 llm_start,
                 llm_end,
-                {"model": self.config.agent.model, "query": query_preview},
+                {"query": query_preview},
                 parent_span_id,
             )
             self.tracer._send_span(

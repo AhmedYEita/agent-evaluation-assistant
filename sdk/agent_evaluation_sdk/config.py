@@ -75,13 +75,6 @@ class RegressionConfig:
 
 
 @dataclass
-class AgentConfig:
-    """Configuration for agent initialization."""
-
-    model: str = "gemini-2.5-flash"
-
-
-@dataclass
 class EvaluationConfig:
     """Main configuration for agent evaluation."""
 
@@ -93,7 +86,6 @@ class EvaluationConfig:
     dataset: DatasetConfig = field(default_factory=DatasetConfig)
     genai_eval: GenAIEvalConfig = field(default_factory=GenAIEvalConfig)
     regression: RegressionConfig = field(default_factory=RegressionConfig)
-    agent: AgentConfig = field(default_factory=AgentConfig)
 
     @classmethod
     def from_yaml(cls, path: Path) -> "EvaluationConfig":
@@ -110,7 +102,6 @@ class EvaluationConfig:
             dataset=DatasetConfig(**data.get("dataset", {})),
             genai_eval=GenAIEvalConfig(**data.get("genai_eval", {})),
             regression=RegressionConfig(**data.get("regression", {})),
-            agent=AgentConfig(**data.get("agent", {})),
         )
 
     @classmethod

@@ -74,29 +74,47 @@ terraform validate
 
 ```
 agent-evaluation-agent/
-├── sdk/                          # Python SDK
+├── .github/
+│   └── workflows/
+│       ├── test-sdk.yml           # SDK testing & quality checks
+│       └── validate-infra.yml     # Terraform validation
+├── example_agents/                # Example implementations
+│   ├── custom_agent.py            # Custom agent example
+│   ├── adk_agent.py               # ADK agent example
+│   ├── agent_config.yaml          # Agent-specific settings (project, model)
+│   ├── eval_config.yaml           # SDK configuration (logging, tracing, metrics)
+│   ├── run_evaluation.py          # Evaluation runner script
+│   └── requirements.txt           # Python dependencies
+├── sdk/                           # Python SDK
 │   ├── agent_evaluation_sdk/
-│   │   ├── __init__.py
-│   │   ├── core.py              # Main wrapper
-│   │   ├── config.py            # Configuration
-│   │   ├── logging.py           # Cloud Logging
-│   │   ├── tracing.py           # Cloud Trace
-│   │   ├── metrics.py           # Cloud Monitoring
-│   │   ├── dataset.py           # Dataset collection
-│   │   └── cli.py               # CLI tool
-│   ├── tests/
-│   └── pyproject.toml
-├── terraform/                    # Infrastructure
+│   │   ├── __init__.py            # Package initialization
+│   │   ├── config.py              # Configuration management
+│   │   ├── core.py                # Main evaluation wrapper
+│   │   ├── dataset.py             # Dataset collection to BigQuery
+│   │   ├── evaluation.py          # Gen AI Evaluation Service integration
+│   │   ├── logging.py             # Cloud Logging integration
+│   │   ├── metrics.py             # Cloud Monitoring integration
+│   │   ├── regression.py          # Regression testing framework
+│   │   ├── tracing.py             # Cloud Trace integration
+│   │   └── templates/
+│   │       └── eval_config.template.yaml  # Configuration template
+│   ├── tests/                     # Unit & integration tests
+│   ├── pyproject.toml             # Package metadata & dependencies
+│   └── README.md                  # SDK documentation
+├── terraform/                     # Infrastructure as Code
 │   ├── modules/
-│   │   ├── logging/
-│   │   ├── monitoring/
-│   │   └── dataset/
-│   └── main.tf
-├── examples/                    # Usage examples
-│   └── simple_adk_agent/       # Working demo agent
-└── .github/workflows/           # CI/CD pipelines
-    ├── test-sdk.yml            # SDK testing & quality checks
-    └── validate-infra.yml      # Terraform & infrastructure validation
+│   │   ├── dataset/               # BigQuery dataset & tables
+│   │   ├── logging/               # Cloud Logging configuration
+│   │   └── monitoring/            # Cloud Monitoring dashboards & alerts
+│   ├── main.tf                    # Main Terraform configuration
+│   ├── variables.tf               # Input variables
+│   ├── outputs.tf                 # Output values
+│   ├── terraform.tfvars           # Variable values
+│   └── README.md                  # Infrastructure documentation
+├── README.md                      # Project overview & quick start
+├── SETUP.md                       # Complete setup guide
+├── CONTRIBUTING.md                # This file
+└── LICENSE                        # MIT License
 ```
 
 ## Making Changes

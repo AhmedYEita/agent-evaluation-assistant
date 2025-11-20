@@ -10,55 +10,39 @@ pip install agent-evaluation-sdk
 
 ## Quick Start
 
-### 1. Create Configuration Template
+### 1. Create Configuration Files
 
-```python
-from agent_evaluation_sdk import create_config_template
-
-# Creates eval_config.yaml in current directory
-create_config_template()
-
-# Or specify a custom path
-create_config_template("config/my_eval.yaml")
-```
-
-### 2. Edit Configuration
-
-Edit the generated `eval_config.yaml` with your settings:
-
+**Agent Config** (`agent_config.yaml`): Your agent-specific settings
 ```yaml
 project_id: "your-gcp-project-id"
 agent_name: "your-agent-name"
-
-tracing:
-  enabled: true
-  
-dataset:
-  auto_collect: false  # Enable to collect test data
+model: "gemini-2.5-flash"
 ```
 
-### 3. Enable Evaluation
+**SDK Config** (`eval_config.yaml`): SDK behavior (agent-agnostic)
+```yaml
+logging:
+  enabled: true
+tracing:
+  enabled: true
+dataset:
+  auto_collect: false
+```
+
+### 2. Enable Evaluation
 
 ```python
-from google.genai.adk import Agent
-from agent_evaluation_sdk import enable_evaluation, EvaluationConfig
-from pathlib import Path
+from agent_evaluation_sdk import enable_evaluation
 
-# Load config
-config = EvaluationConfig.from_yaml(Path("eval_config.yaml"))
+# Create your agent (any agent with a generate_content method)
+agent = YourAgent(...)
 
-# Create your agent
-agent = Agent(
-    model=config.agent.model,
-    system_instruction="You are a helpful assistant"
-)
-
-# Enable evaluation - that's it!
-enable_evaluation(
+# Enable evaluation - one line!
+wrapper = enable_evaluation(
     agent=agent,
-    project_id=config.project_id,
-    agent_name=config.agent_name,
-    config=config
+    project_id="your-gcp-project-id",
+    agent_name="your-agent-name",
+    config_path="eval_config.yaml"
 )
 
 # Use your agent normally
