@@ -1,12 +1,4 @@
-# Evaluation Configuration
-
-# GCP Project Settings
-project_id: "gcp-project-id"
-agent_name: "my-agent"
-
-# Agent Configuration
-agent:
-  model: "gemini-2.5-flash"
+# Evaluation SDK Configuration Template
 
 # Logging Configuration
 logging:

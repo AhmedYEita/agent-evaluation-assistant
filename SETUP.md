@@ -196,45 +196,69 @@ pip install agent-evaluation-sdk
 ### 1. Install Example Dependencies
 
 ```bash
-cd ../examples/simple_adk_agent
+cd ../example_agents
 pip install -r requirements.txt
 ```
 
-### 2. Set Environment Variable
+### 2. Configure Agent
 
-```bash
-# Set your project ID
-export GCP_PROJECT_ID=$(gcloud config get-value project)
+Edit `agent_config.yaml` with your agent settings:
+
+```yaml
+project_id: "your-gcp-project-id"
+location: "us-central1"
+agent_name: "my-agent"
+model: "gemini-2.5-flash"
+```
+
+Edit `eval_config.yaml` to control SDK behavior:
+
+```yaml
+logging:
+  enabled: true
+dataset:
+  auto_collect: true
 ```
 
 ### 3. Run the Example Agent
 
 ```bash
-python agent.py
+# Interactive mode
+python custom_agent.py
+# or
+python adk_agent.py
+
+# Test mode (runs predefined test queries)
+python custom_agent.py --test
+python adk_agent.py --test
 ```
 
-**Expected Output**:
+**Expected Output (Interactive Mode)**:
 ```
-🚀 Creating ADK Agent with Evaluation...
-
-✅ Evaluation enabled for agent: simple-adk-agent
-   - Logging: Cloud Logging
-   - Tracing: Cloud Trace (sample rate: 1.0)
-   - Metrics: Cloud Monitoring
-   - Dataset: 100.0% of interactions
-
-======================================================================
-Agent is ready! Try asking some questions.
-Type 'quit' to exit.
-======================================================================
+Agent is ready! Type 'quit' to exit.
 
 You: 
 ```
 
-**Try these queries:**
+**Expected Output (Test Mode)**:
+```
+======================================================================
+Running Test Queries
+======================================================================
+
+Total queries: 18
+This will generate a dataset for evaluation.
+
+[1/18] Query: What is Python?
+Response: Python is a high-level programming language...
+⏱️  1234ms
+...
+```
+
+**Try these queries (Interactive Mode):**
 - "What is Python?"
-- "Explain machine learning"
-- "Write a function to sort a list"
+- "Calculate 25 * 48"
+- "Search for the latest Python releases"
 - Type 'quit' to exit
 
 ## Verification
@@ -244,7 +268,7 @@ Wait 1-2 minutes for data to propagate, then verify all components:
 ### Check Cloud Logging
 
 ```bash
-gcloud logging read "resource.labels.agent_name=simple-adk-agent" \
+gcloud logging read "resource.labels.agent_name=my-agent" \
   --limit 5 \
   --format json
 ```
@@ -293,7 +317,7 @@ bq query --use_legacy_sql=false \
   interaction_id,
   agent_name,
   timestamp
-FROM `agent_evaluation.simple_adk_agent_interactions`
+FROM `agent_evaluation.my_agent_interactions`
 ORDER BY timestamp DESC
 LIMIT 5'
 ```
@@ -307,29 +331,33 @@ LIMIT 5'
 Add evaluation to your existing agent with one line:
 
 ```python
-from google.genai.adk import Agent
 from agent_evaluation_sdk import enable_evaluation
 
 # Your existing agent code
-agent = Agent(
-    model="gemini-2.5-flash",
-    system_instruction="You are a helpful assistant",
-)
+agent = YourAgent(...)
 
 # Enable evaluation - that's it!
-enable_evaluation(
+wrapper = enable_evaluation(
     agent=agent,
     project_id="GCP_PROJECT_ID",
-    agent_name="agent-name"
+    agent_name="agent-name",
+    config_path="eval_config.yaml"
 )
 
 # Use your agent normally
 response = agent.generate_content("Hello!")
 ```
 
-### Advanced Configuration (Optional)
+### Configuration Files
 
-Customize services in `eval_config.yaml`:
+**Agent Config** (`agent_config.yaml`): Agent-specific settings
+```yaml
+project_id: "your-gcp-project-id"
+agent_name: "my-agent"
+model: "gemini-2.5-flash"
+```
+
+**SDK Config** (`eval_config.yaml`): SDK behavior (agent-agnostic)
 
 ```yaml
 logging:
@@ -366,10 +394,9 @@ regression:
 Then load it in your agent:
 
 ```python
-from agent_evaluation_sdk import enable_evaluation, load_config
+from agent_evaluation_sdk import enable_evaluation
 
-config = load_config("eval_config.yaml")
-enable_evaluation(agent, "GCP_PROJECT_ID", "my-agent", config=config)
+wrapper = enable_evaluation(agent, "GCP_PROJECT_ID", "my-agent", "eval_config.yaml")
 ```
 
 ### Configure Alerts (Optional)
@@ -402,15 +429,15 @@ Use Gen AI Evaluation Service to test your agent's quality with automated metric
 
 ### Workflow
 
-**1. Enable Collection** (`eval_config.yaml`):
+**1. Enable Collection** (in `eval_config.yaml`):
 ```yaml
 dataset:
   auto_collect: true
 ```
 
 **2. Run Agent** - Interactions auto-save to BigQuery:
-```python
-python agent.py  # All interactions stored in {agent_name}_eval_dataset
+```bash
+python custom_agent.py --test  # All interactions stored in {agent_name}_eval_dataset
 ```
 
 **3. Review in BigQuery Console** - Update ground truth:
@@ -544,7 +571,7 @@ Expected monthly costs for typical usage:
 
 - 📖 [README](./README.md) - Project overview
 - 🔧 [CONTRIBUTING](./CONTRIBUTING.md) - Development guidelines
-- 📂 [Examples](./examples/) - Working code samples
+- 📂 [Examples](./example_agents/) - Working code samples
 - 🐛 [GitHub Issues](https://github.com/AhmedYEita/agent-evaluation-agent/issues)
 
 ---

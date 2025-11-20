@@ -1,17 +1,19 @@
-# Simple ADK Agent with Evaluation
+# Example Agents with Evaluation
 
-This example demonstrates how to integrate the agent evaluation SDK with an ADK agent.
+This folder contains example agents demonstrating how to integrate the evaluation SDK.
 
 ## What's Included
 
 **Files:**
-- `eval_config.yaml` - Configuration for evaluation parameters
-- `agent.py` - Agent with evaluation enabled and tool tracing
+- `agent_config.yaml` - Agent-specific configuration (project, model, tools)
+- `eval_config.yaml` - SDK configuration (logging, tracing, metrics)
+- `custom_agent.py` - Custom agent with evaluation enabled
+- `adk_agent.py` - ADK agent with evaluation enabled
 - `run_evaluation.py` - Evaluation testing script
 - `requirements.txt` - Python dependencies
 
 **Features:**
-- ✅ Easy integration (just a few lines of code)
+- ✅ Easy integration (just one line of code)
 - ✅ Zero-latency observability (background processing)
 - ✅ Automatic logging, tracing, and metrics
 - ✅ Tool tracing with decorator
@@ -22,15 +24,21 @@ This example demonstrates how to integrate the agent evaluation SDK with an ADK 
 
 ### 1. Configure Your Agent
 
-Edit `eval_config.yaml` with your settings:
+Edit `agent_config.yaml` with your agent-specific settings:
 
 ```yaml
+# GCP Settings
 project_id: "your-gcp-project-id"
+location: "us-central1"
+
+# Agent Settings
 agent_name: "my-agent"
+model: "gemini-2.5-flash"
+```
 
-agent:
-  model: "gemini-2.5-flash"
+Edit `eval_config.yaml` to control SDK behavior:
 
+```yaml
 # Enable/disable features as needed
 logging:
   enabled: true  # Set to false to disable
@@ -60,10 +68,12 @@ gcloud auth application-default login
 
 ```bash
 # Interactive mode - chat with your agent
-python agent.py
+python custom_agent.py
+python adk_agent.py
 
-# Test suite - generate evaluation dataset
-python test_queries.py
+# Test mode - generate evaluation dataset
+python custom_agent.py --test
+python adk_agent.py --test
 
 # Evaluation mode - test agent on dataset
 python run_evaluation.py
@@ -103,10 +113,17 @@ bq query --use_legacy_sql=false \
   'SELECT * FROM `agent_evaluation.my_agent_eval_*_metrics` ORDER BY test_timestamp DESC LIMIT 5'
 ```
 
+## Configuration Files
+
+- **`agent_config.yaml`**: Agent-specific settings (project ID, location, agent name, model)
+- **`eval_config.yaml`**: SDK behavior (logging, tracing, metrics, dataset collection)
+
+This separation keeps the SDK agent-agnostic. Tools and system instructions are defined directly in the agent scripts for flexibility.
+
 ## Workflow
 
-1. **Collect Data**: Run `python agent.py` with `auto_collect: true` to collect interactions
+1. **Collect Data**: Run agents with `--test` flag and `auto_collect: true` in `eval_config.yaml`
 2. **Review in BigQuery**: Update `reference` field with correct answers, set `reviewed = TRUE`
 3. **Run Tests**: Use `python run_evaluation.py` to evaluate agent (each run gets unique timestamp)
 
-**Tables**: Test dataset → Test run responses → Metrics (see [SETUP.md](../../SETUP.md))
+**Tables**: Test dataset → Test run responses → Metrics (see [SETUP.md](../SETUP.md))
