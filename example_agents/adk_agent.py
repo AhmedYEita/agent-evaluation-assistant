@@ -218,7 +218,8 @@ async def run_interactive():
             break
         except Exception as e:
             print(f"Error: {e}\n")
-    
+
+    # Flush before shutdown to ensure all data is written
     wrapper.flush()
     wrapper.shutdown()
     print("\n👋 Goodbye!")

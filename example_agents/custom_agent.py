@@ -243,7 +243,8 @@ def run_test_queries():
     print(f"❌ Failed: {failed}/{len(results)}")
     print(f"⏱️  Average response time: {avg_duration:.0f}ms")
 
-    # Clean shutdown before script ends
+    # Flush before shutdown to ensure all data is written
+    wrapper.flush()
     wrapper.shutdown()
 
     print("\n" + "=" * 70)
