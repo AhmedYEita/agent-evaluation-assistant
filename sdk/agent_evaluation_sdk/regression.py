@@ -5,7 +5,7 @@ Runs the agent on a test dataset and evaluates performance.
 """
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from google.cloud import bigquery
@@ -119,22 +119,27 @@ class RegressionTester:
                 response_text = response.text if hasattr(response, "text") else str(response)
                 error = None
 
+                # Ensure response is not empty
+                if not response_text or response_text.strip() == "":
+                    response_text = "[EMPTY RESPONSE]"
+                    error = "Agent returned empty response"
+
             except Exception as e:
                 print(f"   ❌ Error: {e}")
                 response_text = f"ERROR: {str(e)}"
                 error = str(e)
 
-                results.append(
-                    {
-                        "instruction": instruction,
-                        "reference": reference,
-                        "response": response_text,
-                        "context": context,
-                        "test_run_id": str(uuid.uuid4()),
-                        "test_timestamp": datetime.utcnow().isoformat(),
-                        "error": error,
-                    }
-                )
+            results.append(
+                {
+                    "instruction": instruction,
+                    "reference": reference,
+                    "response": response_text,
+                    "context": context,
+                    "test_run_id": str(uuid.uuid4()),
+                    "test_timestamp": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+                    "error": error,
+                }
+            )
 
         print(f"✅ Completed {len(results)} test runs")
         return results
@@ -152,7 +157,7 @@ class RegressionTester:
         Raises:
             Exception: If saving fails
         """
-        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M")
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M")
         response_table = f"{self.project_id}.agent_evaluation.{self.agent_name}_eval_{timestamp}"
         metrics_table = f"{response_table}_metrics"
 
@@ -209,15 +214,17 @@ class RegressionTester:
         Raises:
             Exception: If saving fails
         """
+        import json
+
         print("💾 Saving metrics...")
 
         row = {
             "test_run_name": test_run_name,
             "agent_name": self.agent_name,
-            "test_timestamp": datetime.utcnow().isoformat(),
+            "test_timestamp": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
             "dataset_size": eval_results.get("dataset_size", 0),
-            "metrics": eval_results.get("metrics", {}),
-            "criteria_scores": eval_results.get("criteria_scores", {}),
+            "metrics": json.dumps(eval_results.get("metrics", {})),
+            "criteria_scores": json.dumps(eval_results.get("criteria_scores", {})),
         }
 
         schema = [
@@ -225,8 +232,8 @@ class RegressionTester:
             bigquery.SchemaField("agent_name", "STRING", mode="REQUIRED"),
             bigquery.SchemaField("test_timestamp", "TIMESTAMP", mode="REQUIRED"),
             bigquery.SchemaField("dataset_size", "INTEGER", mode="NULLABLE"),
-            bigquery.SchemaField("metrics", "JSON", mode="NULLABLE"),
-            bigquery.SchemaField("criteria_scores", "JSON", mode="NULLABLE"),
+            bigquery.SchemaField("metrics", "STRING", mode="NULLABLE"),
+            bigquery.SchemaField("criteria_scores", "STRING", mode="NULLABLE"),
         ]
 
         try:

@@ -246,11 +246,11 @@ You:
 Running Test Queries
 ======================================================================
 
-Total queries: 18
+Total queries: 5
 This will generate a dataset for evaluation.
 
-[1/18] Query: What is Python?
-Response: Python is a high-level programming language...
+[1/5] Query: What does HTTP stand for?
+Response: HTTP stands for...
 ⏱️  1234ms
 ...
 ```
@@ -432,7 +432,7 @@ Use Gen AI Evaluation Service to test your agent's quality with automated metric
 **1. Enable Collection** (in `eval_config.yaml`):
 ```yaml
 dataset:
-  auto_collect: true
+  auto_collect: true  # Enable to collect data
 ```
 
 **2. Run Agent** - Interactions auto-save to BigQuery:
@@ -440,17 +440,25 @@ dataset:
 python custom_agent.py --test  # All interactions stored in {agent_name}_eval_dataset
 ```
 
-**3. Review in BigQuery Console** - Update ground truth:
+**3. Disable Collection** (in `eval_config.yaml`):
+```yaml
+dataset:
+  auto_collect: false  # IMPORTANT: Set back to false to avoid duplicates
+```
+
+**4. Review in BigQuery Console** - Update ground truth:
 ```sql
 UPDATE `PROJECT.agent_evaluation.my_agent_eval_dataset`
 SET reference = 'Correct answer here', reviewed = TRUE
 WHERE interaction_id = 'abc123'
 ```
 
-**4. Run Evaluation Test**:
+**5. Run Evaluation Test** (with `auto_collect: false`):
 ```bash
 python run_evaluation.py  # Fetches test cases, runs agent, evaluates, saves results
 ```
+
+> ⚠️ **Note**: Keep `auto_collect: false` during evaluation to prevent duplicate data collection.
 
 ### Available Metrics
 

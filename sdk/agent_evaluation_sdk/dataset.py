@@ -4,7 +4,7 @@ Dataset collection for agent evaluation.
 
 import json
 import tempfile
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -78,7 +78,7 @@ class DatasetCollector:
         entry = {
             "interaction_id": interaction_id,
             "agent_name": self.agent_name,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
             # Gen AI Evaluation Service fields
             "instruction": instruction,  # User's question/prompt
             "reference": response,  # Agent's response becomes the reference (ground truth)

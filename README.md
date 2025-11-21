@@ -31,7 +31,7 @@ terraform apply -var="project_id=GCP_PROJECT_ID"
 ```yaml
 project_id: "GCP_PROJECT_ID"
 agent_name: "my-agent"
-model: "gemini-2.5-flash"
+  model: "gemini-2.5-flash"
 ```
 
 **SDK Config** (`eval_config.yaml`):
@@ -41,7 +41,7 @@ logging:
 tracing:
   enabled: true
 dataset:
-  auto_collect: false
+  auto_collect: false  # Set to true to collect data, then back to false
 ```
 
 ### 3. Enable Evaluation (1 line!)
@@ -96,9 +96,9 @@ python run_evaluation.py
 ```
 
 **Workflow:**
-1. **Collect** - Agent responses stored in test dataset table
+1. **Collect** - Set `auto_collect: true`, run agent with `--test`, then set back to `false`
 2. **Review** - Update ground truth in BigQuery
-3. **Evaluate** - Run agent on test cases, compare responses vs ground truth
+3. **Evaluate** - Run `run_evaluation.py` (keeps `auto_collect: false` to avoid duplicates)
 
 **Available Metrics:**
 - **Automated**: BLEU, ROUGE

@@ -64,7 +64,6 @@ class GenAIEvaluator:
                 "fluency",
                 "safety",
                 "groundedness",
-                "fulfillment",
             ]
         if thresholds is None:
             thresholds = {}
@@ -108,16 +107,19 @@ class GenAIEvaluator:
         print(f"   Computing {metric_name.upper()} scores...")
 
         try:
+            import pandas as pd
             from vertexai.preview.evaluation import EvalTask
 
-            # Prepare evaluation dataset
-            eval_dataset = [
+            # Prepare evaluation dataset as DataFrame
+            # Note: Vertex AI expects 'response' column for BLEU/ROUGE
+            eval_data = [
                 {
                     "reference": item.get("reference", ""),
-                    "prediction": item.get("response", ""),
+                    "response": item.get("response", ""),
                 }
                 for item in dataset
             ]
+            eval_dataset = pd.DataFrame(eval_data)
 
             # Run evaluation
             eval_task = EvalTask(dataset=eval_dataset, metrics=[metric_name])  # type: ignore[arg-type,list-item]
@@ -150,19 +152,36 @@ class GenAIEvaluator:
             score = 0.0
             if hasattr(result, "summary_metrics") and result.summary_metrics:
                 score = result.summary_metrics.get("bleu/mean", 0.0)
-            elif hasattr(result, "metrics_table") and result.metrics_table:
-                scores_list = [
-                    row.get("bleu", 0.0) for row in result.metrics_table if "bleu" in row
-                ]
-                score = sum(scores_list) / len(scores_list) if scores_list else 0.0
+            elif hasattr(result, "metrics_table") and result.metrics_table is not None:
+                try:
+                    import pandas as pd
+
+                    if isinstance(result.metrics_table, pd.DataFrame):
+                        metrics_dict = result.metrics_table.to_dict("records")
+                        scores_list = [
+                            row.get("bleu", 0.0) for row in metrics_dict if "bleu" in row
+                        ]
+                        score = sum(scores_list) / len(scores_list) if scores_list else 0.0
+                except Exception:
+                    pass
             return {"score": round(score, 4), "count": count}
 
         elif metric_name == "rouge":
             if hasattr(result, "summary_metrics") and result.summary_metrics:
+                # Try different possible key formats
+                rouge_l = result.summary_metrics.get(
+                    "rougeL/mean", result.summary_metrics.get("rouge_l_sum/mean", 0.0)
+                )
+                rouge_1 = result.summary_metrics.get(
+                    "rouge1/mean", result.summary_metrics.get("rouge_1_sum/mean", 0.0)
+                )
+                rouge_2 = result.summary_metrics.get(
+                    "rouge2/mean", result.summary_metrics.get("rouge_2_sum/mean", 0.0)
+                )
                 return {
-                    "rougeL": round(result.summary_metrics.get("rougeL/mean", 0.0), 4),
-                    "rouge1": round(result.summary_metrics.get("rouge1/mean", 0.0), 4),
-                    "rouge2": round(result.summary_metrics.get("rouge2/mean", 0.0), 4),
+                    "rougeL": round(rouge_l, 4),
+                    "rouge1": round(rouge_1, 4),
+                    "rouge2": round(rouge_2, 4),
                     "count": count,
                 }
             return {"rougeL": 0.0, "rouge1": 0.0, "rouge2": 0.0, "count": count}
@@ -245,8 +264,10 @@ class GenAIEvaluator:
                 for criterion in criteria
             }
 
-        # Prepare evaluation dataset
-        eval_dataset = [
+        # Prepare evaluation dataset as DataFrame
+        import pandas as pd
+
+        eval_data = [
             {
                 "prompt": item.get("instruction", ""),
                 "context": item.get("context", ""),
@@ -255,13 +276,13 @@ class GenAIEvaluator:
             }
             for item in dataset
         ]
+        eval_dataset = pd.DataFrame(eval_data)
 
         valid_criteria = {
             "coherence",
             "fluency",
             "safety",
             "groundedness",
-            "fulfillment",
             "instruction_following",
             "verbosity",
         }
@@ -305,7 +326,8 @@ class GenAIEvaluator:
             from vertexai.preview.evaluation import EvalTask
 
             eval_task = EvalTask(dataset=eval_dataset, metrics=[criterion])  # type: ignore[arg-type,list-item]
-            result = eval_task.evaluate(model=self.model_name)  # type: ignore[arg-type]
+            # Don't pass model parameter when dataset has 'response' column (BYOR mode)
+            result = eval_task.evaluate()  # type: ignore[arg-type]
 
             # Extract and normalize score (Vertex AI uses 1-5 scale)
             raw_score = self._extract_raw_score(result, criterion)
@@ -342,11 +364,19 @@ class GenAIEvaluator:
         if hasattr(result, "summary_metrics") and result.summary_metrics:
             return float(result.summary_metrics.get(f"{criterion}/mean", 0.0))
 
-        if hasattr(result, "metrics_table") and result.metrics_table:
-            scores_list = [
-                row.get(criterion, 0.0) for row in result.metrics_table if criterion in row
-            ]
-            return sum(scores_list) / len(scores_list) if scores_list else 0.0
+        if hasattr(result, "metrics_table") and result.metrics_table is not None:
+            # metrics_table is a DataFrame, convert to dict records
+            try:
+                import pandas as pd
+
+                if isinstance(result.metrics_table, pd.DataFrame):
+                    metrics_dict = result.metrics_table.to_dict("records")
+                    scores_list = [
+                        row.get(criterion, 0.0) for row in metrics_dict if criterion in row
+                    ]
+                    return sum(scores_list) / len(scores_list) if scores_list else 0.0
+            except Exception:
+                pass
 
         return 0.0
 
@@ -361,19 +391,26 @@ class GenAIEvaluator:
         Returns:
             Pass rate (0.0 to 1.0)
         """
-        if hasattr(result, "metrics_table") and result.metrics_table:
-            per_sample_scores = [
-                (
-                    row.get(criterion, 0.0) / 5.0
-                    if row.get(criterion, 0.0) > 1.0
-                    else row.get(criterion, 0.0)
-                )
-                for row in result.metrics_table
-                if criterion in row
-            ]
-            if per_sample_scores:
-                passed = sum(1 for s in per_sample_scores if s >= threshold)
-                return round(passed / len(per_sample_scores), 4)
+        if hasattr(result, "metrics_table") and result.metrics_table is not None:
+            try:
+                import pandas as pd
+
+                if isinstance(result.metrics_table, pd.DataFrame):
+                    metrics_dict = result.metrics_table.to_dict("records")
+                    per_sample_scores = [
+                        (
+                            row.get(criterion, 0.0) / 5.0
+                            if row.get(criterion, 0.0) > 1.0
+                            else row.get(criterion, 0.0)
+                        )
+                        for row in metrics_dict
+                        if criterion in row
+                    ]
+                    if per_sample_scores:
+                        passed = sum(1 for s in per_sample_scores if s >= threshold)
+                        return round(passed / len(per_sample_scores), 4)
+            except Exception:
+                pass
 
         # Fallback: binary pass/fail based on average
         raw_score = self._extract_raw_score(result, criterion)
