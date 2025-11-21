@@ -118,7 +118,7 @@ class RegressionTester:
                 response = agent.generate_content(instruction)
                 response_text = response.text if hasattr(response, "text") else str(response)
                 error = None
-                
+
                 # Ensure response is not empty
                 if not response_text or response_text.strip() == "":
                     response_text = "[EMPTY RESPONSE]"
@@ -215,7 +215,7 @@ class RegressionTester:
             Exception: If saving fails
         """
         import json
-        
+
         print("💾 Saving metrics...")
 
         row = {

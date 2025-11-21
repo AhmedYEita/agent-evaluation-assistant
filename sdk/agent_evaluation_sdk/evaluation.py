@@ -107,8 +107,8 @@ class GenAIEvaluator:
         print(f"   Computing {metric_name.upper()} scores...")
 
         try:
-            from vertexai.preview.evaluation import EvalTask
             import pandas as pd
+            from vertexai.preview.evaluation import EvalTask
 
             # Prepare evaluation dataset as DataFrame
             # Note: Vertex AI expects 'response' column for BLEU/ROUGE
@@ -155,8 +155,9 @@ class GenAIEvaluator:
             elif hasattr(result, "metrics_table") and result.metrics_table is not None:
                 try:
                     import pandas as pd
+
                     if isinstance(result.metrics_table, pd.DataFrame):
-                        metrics_dict = result.metrics_table.to_dict('records')
+                        metrics_dict = result.metrics_table.to_dict("records")
                         scores_list = [
                             row.get("bleu", 0.0) for row in metrics_dict if "bleu" in row
                         ]
@@ -168,16 +169,19 @@ class GenAIEvaluator:
         elif metric_name == "rouge":
             if hasattr(result, "summary_metrics") and result.summary_metrics:
                 # Try different possible key formats
-                rougeL = result.summary_metrics.get("rougeL/mean", 
-                         result.summary_metrics.get("rouge_l_sum/mean", 0.0))
-                rouge1 = result.summary_metrics.get("rouge1/mean",
-                         result.summary_metrics.get("rouge_1_sum/mean", 0.0))
-                rouge2 = result.summary_metrics.get("rouge2/mean",
-                         result.summary_metrics.get("rouge_2_sum/mean", 0.0))
+                rouge_l = result.summary_metrics.get(
+                    "rougeL/mean", result.summary_metrics.get("rouge_l_sum/mean", 0.0)
+                )
+                rouge_1 = result.summary_metrics.get(
+                    "rouge1/mean", result.summary_metrics.get("rouge_1_sum/mean", 0.0)
+                )
+                rouge_2 = result.summary_metrics.get(
+                    "rouge2/mean", result.summary_metrics.get("rouge_2_sum/mean", 0.0)
+                )
                 return {
-                    "rougeL": round(rougeL, 4),
-                    "rouge1": round(rouge1, 4),
-                    "rouge2": round(rouge2, 4),
+                    "rougeL": round(rouge_l, 4),
+                    "rouge1": round(rouge_1, 4),
+                    "rouge2": round(rouge_2, 4),
                     "count": count,
                 }
             return {"rougeL": 0.0, "rouge1": 0.0, "rouge2": 0.0, "count": count}
@@ -262,6 +266,7 @@ class GenAIEvaluator:
 
         # Prepare evaluation dataset as DataFrame
         import pandas as pd
+
         eval_data = [
             {
                 "prompt": item.get("instruction", ""),
@@ -363,8 +368,9 @@ class GenAIEvaluator:
             # metrics_table is a DataFrame, convert to dict records
             try:
                 import pandas as pd
+
                 if isinstance(result.metrics_table, pd.DataFrame):
-                    metrics_dict = result.metrics_table.to_dict('records')
+                    metrics_dict = result.metrics_table.to_dict("records")
                     scores_list = [
                         row.get(criterion, 0.0) for row in metrics_dict if criterion in row
                     ]
@@ -388,8 +394,9 @@ class GenAIEvaluator:
         if hasattr(result, "metrics_table") and result.metrics_table is not None:
             try:
                 import pandas as pd
+
                 if isinstance(result.metrics_table, pd.DataFrame):
-                    metrics_dict = result.metrics_table.to_dict('records')
+                    metrics_dict = result.metrics_table.to_dict("records")
                     per_sample_scores = [
                         (
                             row.get(criterion, 0.0) / 5.0
