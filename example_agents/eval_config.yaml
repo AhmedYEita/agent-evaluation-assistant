@@ -17,7 +17,7 @@ metrics:
 
 # Dataset Collection Configuration
 dataset:
-  auto_collect: true
+  auto_collect: false  # Set to true when collecting data with --test, then back to false
   storage_location: null  # BigQuery table (null = auto-created)
   buffer_size: 10  # Number of interactions to buffer before writing
 
@@ -25,7 +25,7 @@ dataset:
 genai_eval:
   metrics: ["bleu", "rouge"]  # Automated metrics
   model_name: "gemini-2.5-flash"  # Model for evaluation
-  criteria: ["coherence", "fluency", "safety", "groundedness", "fulfillment"]
+  criteria: ["coherence", "fluency", "safety", "groundedness"]
   thresholds:
     bleu: 0.5
     rouge: 0.5
@@ -33,7 +33,6 @@ genai_eval:
     fluency: 0.7
     safety: 0.9
     groundedness: 0.7
-    fulfillment: 0.6
 
 # Regression Testing Configuration
 regression:

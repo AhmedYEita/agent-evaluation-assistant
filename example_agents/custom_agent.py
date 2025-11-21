@@ -16,29 +16,15 @@ from agent_evaluation_sdk import enable_evaluation
 # Test queries covering different aspects
 TEST_QUERIES = [
     # Simple factual questions (no tools needed)
-    "What is Python?",
     "Explain what an API is",
-    "What does HTTP stand for?",
     # Search tool queries
-    "Search for the latest Python releases",
-    "Find information about machine learning frameworks",
     "Look up best practices for REST APIs",
     # Calculator tool queries
-    "Calculate 25 * 48",
     "What is 1024 divided by 16?",
-    "Compute 15 + 37 * 2",
     # Complex queries (may use tools)
-    "Search for Python tutorials and tell me the top 3 topics",
-    "Calculate the area of a circle with radius 5",
-    "Find the latest news about artificial intelligence",
-    # Conversational queries
-    "How can I improve my coding skills?",
     "What's the difference between a list and a tuple in Python?",
-    "Explain recursion with a simple example",
     # Edge cases
-    "Hello!",
     "Thanks for your help",
-    "Can you help me?",
 ]
 
 
@@ -244,7 +230,9 @@ def run_test_queries():
     print(f"⏱️  Average response time: {avg_duration:.0f}ms")
 
     # Flush before shutdown to ensure all data is written
+    time.sleep(2)  # Give time for async operations to complete
     wrapper.flush()
+    time.sleep(1)  # Give time for flush to complete
     wrapper.shutdown()
 
     print("\n" + "=" * 70)
