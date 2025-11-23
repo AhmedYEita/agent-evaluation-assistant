@@ -33,8 +33,8 @@ Before you begin, ensure you have:
 ## Clone Repository
 
 ```bash
-git clone https://github.com/AhmedYEita/agent-evaluation-agent.git
-cd agent-evaluation-agent
+git clone https://github.com/AhmedYEita/agent-evaluation-assistant.git
+cd agent-evaluation-assistant
 ```
 
 ## GCP Setup
@@ -580,7 +580,7 @@ Expected monthly costs for typical usage:
 - 📖 [README](./README.md) - Project overview
 - 🔧 [CONTRIBUTING](./CONTRIBUTING.md) - Development guidelines
 - 📂 [Examples](./example_agents/) - Working code samples
-- 🐛 [GitHub Issues](https://github.com/AhmedYEita/agent-evaluation-agent/issues)
+- 🐛 [GitHub Issues](https://github.com/AhmedYEita/agent-evaluation-assistant/issues)
 
 ---
 

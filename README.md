@@ -1,4 +1,4 @@
-# Agent Evaluation Agent
+# Agent Evaluation Assistant
 
 **Production-ready evaluation infrastructure for AI agents with automated monitoring, testing, and quality evaluation.**
 
@@ -9,6 +9,7 @@ A lightweight Python SDK and Terraform infrastructure that enables comprehensive
 ### Key Features
 
 - **One-Line Integration**: Enable full evaluation with a single function call
+- **Setup Assistant**: Interactive CLI tool to guide you through setup
 - **Zero-Latency Observability**: All Cloud API calls run in background threads
 - **Automated Data Collection**: Logs, traces, metrics, and datasets captured automatically
 - **Production-Ready**: Built on GCP services (Cloud Logging, Trace, Monitoring, BigQuery)
@@ -18,14 +19,40 @@ A lightweight Python SDK and Terraform infrastructure that enables comprehensive
 
 ## 🚀 Quick Start
 
-### 1. Deploy Infrastructure (2 minutes)
+### 1. Clone & Install SDK (Separate from Your Agent)
+
+Clone this repo **outside** your agent project:
+
 ```bash
-cd terraform
-terraform init
-terraform apply -var="project_id=GCP_PROJECT_ID"
+# Clone in a separate location (e.g., ~/repos, ~/projects)
+cd ~/repos
+git clone https://github.com/yourorg/agent-evaluation-assistant
+cd agent-evaluation-assistant
+pip install -e ./sdk
 ```
 
-### 2. Configure Your Setup
+**Directory structure:**
+```
+~/repos/
+├── agent-evaluation-assistant/     # ← SDK repo (clone here)
+└── my-agent-project/           # ← Your agent (existing project)
+```
+
+### 2. Run Setup Assistant
+
+```bash
+cd agent-evaluation-assistant/assistant/agent
+python assistant_agent.py
+```
+
+The assistant will guide you through:
+- ✅ Getting your agent project path
+- ✅ Verifying agent compatibility
+- ✅ Generating configuration files **in your project**
+- ✅ Setting up Terraform infrastructure **in your project**
+- ✅ Showing integration code
+
+**Or manually configure** by creating these files in your project:
 
 **Agent Config** (`agent_config.yaml`):
 ```yaml
@@ -48,11 +75,8 @@ dataset:
 ```python
 from agent_evaluation_sdk import enable_evaluation
 
-# Your agent setup
 agent = YourAgent(...)
-
-# Enable evaluation
-wrapper = enable_evaluation(agent, "GCP_PROJECT_ID", "my-agent", "eval_config.yaml")
+wrapper = enable_evaluation(agent, "PROJECT_ID", "agent-name", "eval_config.yaml")
 ```
 
 ## ✨ What You Get
@@ -116,6 +140,8 @@ See [SETUP.md](./SETUP.md#agent-testing--evaluation) for details.
 ├── sdk/                         # Python SDK
 │   ├── agent_evaluation_sdk/    # Core SDK code
 │   └── tests/                   # Unit & integration tests
+├── assistant/                   # Setup Assistant (NEW!)
+│   └── agent/                   # ADK assistant agent (run locally)
 ├── terraform/                   # Infrastructure as Code
 │   └── modules/                 # GCP services modules
 ├── example_agents/              # Working examples
@@ -130,7 +156,18 @@ See [SETUP.md](./SETUP.md#agent-testing--evaluation) for details.
 
 - **[SETUP.md](./SETUP.md)** - Complete setup and deployment guide
 - **[CONTRIBUTING.md](./CONTRIBUTING.md)** - Development and contribution guidelines
+- **[assistant/](./assistant/)** - Setup Assistant documentation
 - **[example_agents/](./example_agents/)** - Working code samples
+
+## 🛠️ CLI Commands
+
+```bash
+# Interactive setup
+agent-eval-assistant setup
+
+# Validate existing setup
+agent-eval-assistant validate --project /path/to/project
+```
 
 ## 📄 License
 
