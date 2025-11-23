@@ -16,7 +16,7 @@ Thank you for your interest in contributing! This document provides guidelines a
 ```bash
 # Clone the repository
 git clone <your-repo-url>
-cd agent-evaluation-agent
+cd agent-evaluation-assistant
 
 # Set up Python environment
 python -m venv venv
@@ -73,7 +73,7 @@ terraform validate
 ## Project Structure
 
 ```
-agent-evaluation-agent/
+agent-evaluation-assistant/
 ├── .github/
 │   └── workflows/
 │       ├── test-sdk.yml           # SDK testing & quality checks

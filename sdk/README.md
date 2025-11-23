@@ -60,4 +60,4 @@ response = agent.generate_content("Hello!")
 
 ## Documentation
 
-See the [main repository](https://github.com/yourusername/agent-evaluation-agent) for full documentation.
+See the [main repository](https://github.com/yourusername/agent-evaluation-assistant) for full documentation.
