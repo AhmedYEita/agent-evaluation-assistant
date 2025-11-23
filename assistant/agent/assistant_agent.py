@@ -92,7 +92,7 @@ async def run_setup_assistant():
     print("\n" + "="*60)
     print("🤖 Agent Evaluation Setup Assistant")
     print("="*60)
-    print("\nType 'exit', 'quit', or 'bye' to end the conversation.")
+    print("\nType 'exit', 'quit', or 'q' to end the conversation.")
     print("Type 'help' for assistance.\n")
     
     # Start conversation
