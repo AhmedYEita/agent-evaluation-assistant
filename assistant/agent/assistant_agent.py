@@ -8,6 +8,8 @@ Uses Google ADK (Agent Development Kit) framework with system instructions and t
 import os
 import asyncio
 from google.adk import Agent
+from google.adk.runners import InMemoryRunner
+from google.genai import types
 
 
 # System instruction for the assistant
@@ -20,8 +22,16 @@ Key responsibilities:
 2. Verify their agent is compatible with the SDK
 3. Help them configure observability services (logging, tracing, metrics)
 4. Guide them on dataset collection (should be OFF by default)
-5. Copy necessary files (eval_config.yaml, terraform module) to their project
-6. Provide clear next steps for integration
+5. Show them detailed SDK integration code for their agent type
+6. Help verify the integration is correct
+7. Copy necessary files (eval_config.yaml) to their project
+8. Ask permission before setting up Terraform infrastructure
+9. Guide them through terraform init and apply
+
+Agent Compatibility:
+- ADK agents: Must have Agent, InMemoryRunner, and runner.run_async() async generator method
+- Custom agents: Must have a generate_content(prompt: str) method
+Both types are fully supported!
 
 Personality:
 - Friendly and conversational (use emojis: ✓ ⚠️ 💡 📦 🎉)
@@ -35,21 +45,29 @@ Important guidelines:
 - Explain what each observability service does before asking
 - Verify agent compatibility before proceeding
 - Customize eval_config.yaml based on user preferences
-- Show actual code examples with their specific values
+- Show detailed integration code examples based on their agent type (ADK vs Custom)
+- Guide them step-by-step through SDK integration
+- Verify integration before moving to infrastructure
+- ALWAYS ask permission before setting up Terraform infrastructure
+- Help them run terraform init and apply if they want
 
-When the user asks to set up:
-1. Greet warmly and explain the process (5-7 minutes)
-2. Get their agent project location
-3. Check agent compatibility using check_agent_compatibility tool
+Setup Flow:
+1. Greet warmly and explain the process
+2. Get their agent project location and file path
+3. Check agent compatibility to determine type (ADK or Custom)
 4. Get GCP project ID and agent name
 5. Ask about observability preferences (explain each service first)
 6. Ask about dataset collection (explain when to use it)
-7. Generate customized config using copy_config_template tool
-8. Copy terraform module using copy_terraform_module tool
-9. Show integration code with their actual values
-10. Give clear next steps
+7. Generate customized eval_config.yaml
+8. **Show detailed SDK integration code for their specific agent type**
+9. **Guide them to implement the integration in their agent file**
+10. **Verify the integration is correct by checking their agent file**
+11. **Ask permission before setting up Terraform infrastructure**
+12. If approved, copy terraform module and create main.tf
+13. Guide them through terraform init and apply
+14. Show final next steps
 
-Be conversational and adaptive, not robotic!
+Be conversational, thorough, and adaptive!
 """
 
 
@@ -57,50 +75,64 @@ Be conversational and adaptive, not robotic!
 from tools.file_operations import (
     check_agent_compatibility_tool,
     copy_config_template_tool,
-    copy_terraform_module_tool
+    copy_terraform_module_tool,
+    read_agent_file_tool,
+    verify_integration_tool
 )
 from tools.config_validator import validate_config_tool
 from tools.infra_checker import check_infrastructure_tool
 
 
 def create_assistant_agent():
-    """Create the ADK-based assistant agent"""
+    """Create the ADK-based assistant agent and runner"""
+    
+    # Configure Vertex AI for ADK (ADK uses environment variables)
+    os.environ["GOOGLE_CLOUD_PROJECT"] = os.getenv("GOOGLE_CLOUD_PROJECT")
+    os.environ["GOOGLE_CLOUD_LOCATION"] = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
+    os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "1"
     
     # Define tools available to the agent
     tools = [
         check_agent_compatibility_tool,
+        read_agent_file_tool,
+        verify_integration_tool,
         validate_config_tool,
-        check_infrastructure_tool,
         copy_config_template_tool,
+        check_infrastructure_tool,
         copy_terraform_module_tool,
     ]
     
     # Create agent with ADK
     agent = Agent(
+        name="setup_assistant",
         model="gemini-2.0-flash",
-        system_instruction=SYSTEM_INSTRUCTION,
+        instruction=SYSTEM_INSTRUCTION,
         tools=tools,
     )
     
-    return agent
+    # Create runner
+    runner = InMemoryRunner(agent=agent, app_name="setup_assistant_app")
+    
+    return agent, runner
 
 
 async def run_setup_assistant():
     """Run the interactive setup assistant"""
-    agent = create_assistant_agent()
+    agent, runner = create_assistant_agent()
+    
+    # Create session
+    session = await runner.session_service.create_session(
+        app_name="setup_assistant_app", user_id="user"
+    )
     
     print("\n" + "="*60)
     print("🤖 Agent Evaluation Setup Assistant")
     print("="*60)
-    print("\nType 'exit', 'quit', or 'q' to end the conversation.")
-    print("Type 'help' for assistance.\n")
+    print("\nType 'exit', 'quit', or 'q' to end the conversation.\n")
     
     # Start conversation
     print("Assistant: Hi! I'm here to help you set up agent evaluation infrastructure.")
     print("          This will take about 5-7 minutes. Ready to get started?\n")
-    
-    # Conversation loop
-    history = []
     
     while True:
         try:
@@ -109,14 +141,24 @@ async def run_setup_assistant():
             if not user_input:
                 continue
             
-            if user_input.lower() in ['exit', 'quit', 'bye']:
+            if user_input.lower() in ['exit', 'quit', 'q']:
                 print("\nAssistant: Great! Feel free to come back if you need help. Good luck! 🎉\n")
                 break
             
-            # Send message to agent
-            response = await agent.generate_content(user_input)
+            # Send message to agent via runner
+            content = types.Content(role="user", parts=[types.Part.from_text(text=user_input)])
             
-            print(f"\nAssistant: {response.text}\n")
+            # Collect response from async generator
+            response_text = ""
+            async for event in runner.run_async(
+                user_id="user",
+                session_id=session.id,
+                new_message=content,
+            ):
+                if event.content.parts and event.content.parts[0].text:
+                    response_text = event.content.parts[0].text
+            
+            print(f"\nAssistant: {response_text}\n")
             
         except KeyboardInterrupt:
             print("\n\nAssistant: Setup interrupted. Run this again when you're ready! 👋\n")

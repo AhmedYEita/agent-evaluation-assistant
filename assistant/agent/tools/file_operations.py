@@ -6,12 +6,12 @@ import shutil
 from pathlib import Path
 
 
-def check_repo_exists_tool(repo_path: str = None) -> dict:
+def check_repo_exists_tool(repo_path: str) -> dict:
     """
     Check if agent-evaluation-assistant repository exists
     
     Args:
-        repo_path: Optional path to check, otherwise searches from current location
+        repo_path: Path to check (use empty string to search from current location)
     
     Returns:
         {
@@ -54,8 +54,9 @@ def check_agent_compatibility_tool(agent_file_path: str) -> dict:
     Returns:
         {
             "compatible": bool,
+            "agent_type": str (either "adk" or "custom"),
             "has_generate_content": bool,
-            "is_async": bool,
+            "has_runner": bool,
             "message": str
         }
     """
@@ -64,38 +65,53 @@ def check_agent_compatibility_tool(agent_file_path: str) -> dict:
     if not agent_path.exists():
         return {
             "compatible": False,
+            "agent_type": "unknown",
             "has_generate_content": False,
-            "is_async": False,
+            "has_runner": False,
             "message": f"File not found: {agent_file_path}"
         }
     
     try:
         content = agent_path.read_text()
         
-        has_generate = 'def generate_content' in content
-        is_async = 'async def generate_content' in content
+        # Check for ADK agent patterns
+        has_adk_imports = 'from google.adk import' in content or 'import google.adk' in content
+        has_runner = 'InMemoryRunner' in content or 'runner.run_async' in content
         
-        if has_generate or is_async:
-            agent_type = "async (ADK)" if is_async else "sync (custom)"
+        # Check for custom agent patterns
+        has_generate = 'def generate_content' in content
+        
+        if has_adk_imports and has_runner:
             return {
                 "compatible": True,
+                "agent_type": "adk",
+                "has_generate_content": False,
+                "has_runner": True,
+                "message": "✓ Agent is compatible! Detected ADK agent with InMemoryRunner"
+            }
+        elif has_generate:
+            return {
+                "compatible": True,
+                "agent_type": "custom",
                 "has_generate_content": True,
-                "is_async": is_async,
-                "message": f"✓ Agent is compatible! Detected {agent_type} generate_content() method"
+                "has_runner": False,
+                "message": "✓ Agent is compatible! Detected custom agent with generate_content() method"
             }
         else:
             return {
                 "compatible": False,
+                "agent_type": "unknown",
                 "has_generate_content": False,
-                "is_async": False,
-                "message": "Agent needs a generate_content(prompt: str) method to work with SDK"
+                "has_runner": False,
+                "message": "Agent needs either:\n- ADK setup (Agent + InMemoryRunner + runner.run_async), OR\n- Custom agent with generate_content(prompt: str) method"
             }
     
     except Exception as e:
         return {
             "compatible": False,
+            "agent_type": "unknown",
             "has_generate_content": False,
-            "is_async": False,
+            "has_runner": False,
             "message": f"Error reading file: {e}"
         }
 
@@ -103,10 +119,10 @@ def check_agent_compatibility_tool(agent_file_path: str) -> dict:
 def copy_config_template_tool(
     repo_path: str,
     dest_path: str,
-    enable_logging: bool = True,
-    enable_tracing: bool = True,
-    enable_metrics: bool = True,
-    auto_collect: bool = False
+    enable_logging: bool,
+    enable_tracing: bool,
+    enable_metrics: bool,
+    auto_collect: bool
 ) -> dict:
     """
     Copy and customize eval_config.yaml template
@@ -179,7 +195,7 @@ def copy_terraform_module_tool(
     dest_path: str,
     project_id: str,
     agent_name: str,
-    region: str = "us-central1"
+    region: str
 ) -> dict:
     """
     Copy terraform module and create main.tf
@@ -251,6 +267,126 @@ module "agent_evaluation" {{
             "terraform_path": None,
             "main_tf_created": False,
             "message": f"Error copying terraform: {e}"
+        }
+
+
+def read_agent_file_tool(agent_file_path: str) -> dict:
+    """
+    Read the contents of an agent file to verify integration
+    
+    Args:
+        agent_file_path: Path to the agent Python file
+    
+    Returns:
+        {
+            "success": bool,
+            "content": str,
+            "message": str
+        }
+    """
+    try:
+        agent_path = Path(agent_file_path).expanduser()
+        
+        if not agent_path.exists():
+            return {
+                "success": False,
+                "content": "",
+                "message": f"File not found: {agent_file_path}"
+            }
+        
+        content = agent_path.read_text()
+        
+        return {
+            "success": True,
+            "content": content,
+            "message": f"✓ Successfully read {agent_path.name}"
+        }
+    
+    except Exception as e:
+        return {
+            "success": False,
+            "content": "",
+            "message": f"Error reading file: {e}"
+        }
+
+
+def verify_integration_tool(agent_file_path: str, agent_type: str) -> dict:
+    """
+    Verify that SDK integration is correctly implemented
+    
+    Args:
+        agent_file_path: Path to the agent Python file
+        agent_type: Type of agent ("adk" or "custom")
+    
+    Returns:
+        {
+            "integrated": bool,
+            "has_import": bool,
+            "has_enable_evaluation": bool,
+            "has_wrapper": bool,
+            "has_tool_trace": bool,
+            "missing_steps": list,
+            "message": str
+        }
+    """
+    try:
+        agent_path = Path(agent_file_path).expanduser()
+        
+        if not agent_path.exists():
+            return {
+                "integrated": False,
+                "has_import": False,
+                "has_enable_evaluation": False,
+                "has_wrapper": False,
+                "has_tool_trace": False,
+                "missing_steps": ["File not found"],
+                "message": f"File not found: {agent_file_path}"
+            }
+        
+        content = agent_path.read_text()
+        
+        # Check for required integration components
+        has_import = 'from agent_evaluation_sdk import enable_evaluation' in content
+        has_enable_evaluation = 'enable_evaluation(' in content
+        has_wrapper = 'wrapper' in content
+        has_tool_trace = '@wrapper.tool_trace' in content or 'wrapper.tool_trace' in content
+        
+        missing_steps = []
+        if not has_import:
+            missing_steps.append("Import enable_evaluation from agent_evaluation_sdk")
+        if not has_enable_evaluation:
+            missing_steps.append("Call enable_evaluation() to wrap the agent/runner")
+        if not has_wrapper:
+            missing_steps.append("Store the wrapper returned by enable_evaluation()")
+        
+        integrated = has_import and has_enable_evaluation and has_wrapper
+        
+        if integrated:
+            message = "✓ SDK integration looks good!"
+            if not has_tool_trace:
+                message += " Note: No tool tracing detected - add @wrapper.tool_trace decorators to track tool calls."
+        else:
+            message = f"Integration incomplete. Missing: {', '.join(missing_steps)}"
+        
+        return {
+            "integrated": integrated,
+            "has_import": has_import,
+            "has_enable_evaluation": has_enable_evaluation,
+            "has_wrapper": has_wrapper,
+            "has_tool_trace": has_tool_trace,
+            "missing_steps": missing_steps,
+            "message": message
+        }
+    
+    except Exception as e:
+        return {
+            "integrated": False,
+            "has_import": False,
+            "has_enable_evaluation": False,
+            "has_wrapper": False,
+            "has_tool_trace": False,
+            "missing_steps": [],
+            "message": f"Error verifying integration: {e}"
         }
 
 
