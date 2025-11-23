@@ -11,7 +11,7 @@ Clone this repo **outside** your agent project directory:
 ```bash
 # Clone SDK in a separate location (e.g., ~/repos, ~/projects)
 cd ~/repos  # or wherever you keep repositories
-git clone https://github.com/yourorg/agent-evaluation-assistant
+git clone https://github.com/AhmedYEita/agent-evaluation-assistant
 cd agent-evaluation-assistant
 pip install -e ./sdk
 ```
@@ -29,6 +29,8 @@ pip install -e ./sdk
 ```bash
 cd assistant/agent
 pip install -r requirements.txt
+export GOOGLE_CLOUD_PROJECT="YOUR GCP PROJECT"
+export GOOGLE_CLOUD_REGION="us-central1"
 python assistant_agent.py
 ```
 

@@ -5,7 +5,7 @@ Simple Config Validator
 import yaml
 
 
-def validate_config_tool(config_content: str, config_type: str = "eval_config"):
+def validate_config_tool(config_content: str, config_type: str):
     """
     Validate configuration files
     
