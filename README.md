@@ -121,8 +121,8 @@ python run_evaluation.py
 
 **Workflow:**
 1. **Collect** - Set `auto_collect: true`, run agent with `--test`, then set back to `false`
-2. **Review** - Update ground truth in BigQuery
-3. **Evaluate** - Run `run_evaluation.py` (keeps `auto_collect: false` to avoid duplicates)
+2. **Review** - Update ground truth in BigQuery (`{agent_name}_eval_dataset` table)
+3. **Evaluate** - Run evaluation script (appends to `{agent_name}_eval_run` and `{agent_name}_eval_metrics` tables)
 
 **Available Metrics:**
 - **Automated**: BLEU, ROUGE

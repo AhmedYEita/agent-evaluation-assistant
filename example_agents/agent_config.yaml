@@ -5,5 +5,4 @@ project_id: "dt-ahmedyasser-sandbox-dev"
 location: "us-central1"
 
 # Agent Settings
-agent_name: "my_agent"
 model: "gemini-2.5-flash"

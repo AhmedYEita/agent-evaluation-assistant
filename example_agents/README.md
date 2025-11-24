@@ -9,7 +9,8 @@ This folder contains example agents demonstrating how to integrate the evaluatio
 - `eval_config.yaml` - SDK configuration (logging, tracing, metrics)
 - `custom_agent.py` - Custom agent with evaluation enabled
 - `adk_agent.py` - ADK agent with evaluation enabled
-- `run_evaluation.py` - Evaluation testing script
+- `run_evaluation_custom.py` - Evaluation script specifically for custom agent
+- `run_evaluation_adk.py` - Evaluation script specifically for ADK agent
 - `requirements.txt` - Python dependencies
 
 **Features:**
@@ -76,7 +77,8 @@ python custom_agent.py --test
 python adk_agent.py --test
 
 # Evaluation mode - test agent on dataset
-python run_evaluation.py
+python run_evaluation_custom.py  # For custom agent
+python run_evaluation_adk.py     # For ADK agent
 ```
 
 ## View Results
@@ -108,9 +110,13 @@ gcloud logging read "resource.labels.agent_name=my-agent" \
 bq query --use_legacy_sql=false \
   'SELECT * FROM `agent_evaluation.my_agent_eval_dataset` LIMIT 10'
 
-# View test results
+# View test results (using new append-only tables)
 bq query --use_legacy_sql=false \
-  'SELECT * FROM `agent_evaluation.my_agent_eval_*_metrics` ORDER BY test_timestamp DESC LIMIT 5'
+  'SELECT test_run_name, test_timestamp, dataset_size FROM `agent_evaluation.my_agent_eval_metrics` ORDER BY test_timestamp DESC LIMIT 5'
+
+# View specific test run responses
+bq query --use_legacy_sql=false \
+  'SELECT * FROM `agent_evaluation.my_agent_eval_run` WHERE test_run_name = "test_20250124_1430" LIMIT 10'
 ```
 
 ## Configuration Files
@@ -124,6 +130,13 @@ This separation keeps the SDK agent-agnostic. Tools and system instructions are 
 
 1. **Collect Data**: Run agents with `--test` flag and `auto_collect: true` in `eval_config.yaml`
 2. **Review in BigQuery**: Update `reference` field with correct answers, set `reviewed = TRUE`
-3. **Run Tests**: Use `python run_evaluation.py` to evaluate agent (each run gets unique timestamp)
+3. **Run Tests**: Use the appropriate evaluation script for your agent:
+   - `python run_evaluation_custom.py` for custom agents
+   - `python run_evaluation_adk.py` for ADK agents
 
-**Tables**: Test dataset → Test run responses → Metrics (see [SETUP.md](../SETUP.md))
+**Tables**: 
+- Test dataset: `{agent_name}_eval_dataset`
+- Test runs: `{agent_name}_eval_run` (all runs appended)
+- Metrics: `{agent_name}_eval_metrics` (all metrics appended)
+
+See [SETUP.md](../SETUP.md) for more details.

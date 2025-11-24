@@ -157,13 +157,21 @@ class RegressionTester:
         Raises:
             Exception: If saving fails
         """
-        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M")
-        response_table = f"{self.project_id}.agent_evaluation.{self.agent_name}_eval_{timestamp}"
-        metrics_table = f"{response_table}_metrics"
+        # Use fixed table names
+        response_table = f"{self.project_id}.agent_evaluation.{self.agent_name}_eval_run"
+        metrics_table = f"{self.project_id}.agent_evaluation.{self.agent_name}_eval_metrics"
 
         print("💾 Saving responses...")
+        
+        # Add timestamp to each row
+        timestamp = datetime.utcnow().isoformat()
         rows = [
-            {**result, "test_run_name": test_run_name, "agent_name": self.agent_name}
+            {
+                **result,
+                "test_run_name": test_run_name,
+                "agent_name": self.agent_name,
+                "test_timestamp": timestamp
+            }
             for result in results
         ]
 
@@ -179,12 +187,15 @@ class RegressionTester:
             bigquery.SchemaField("error", "STRING", mode="NULLABLE"),
         ]
 
+        # Create table if it doesn't exist
         try:
             table = bigquery.Table(response_table, schema=schema)
-            self.bq_client.create_table(table)
+            table.clustering_fields = ["agent_name", "test_timestamp"]
+            self.bq_client.create_table(table, exists_ok=True)
+            print(f"   ✓ Table ready: {response_table}")
         except Conflict:
             # Table already exists, which is fine
-            print(f"   Table already exists: {response_table}")
+            pass
         except Exception as e:
             print(f"❌ Error creating table: {e}")
             raise
@@ -194,7 +205,7 @@ class RegressionTester:
             if errors:
                 print(f"⚠️  Errors inserting rows: {errors}")
             else:
-                print(f"✅ Responses saved: {response_table}")
+                print(f"✅ Responses saved: {response_table} ({len(rows)} rows)")
         except Exception as e:
             print(f"❌ Error inserting rows: {e}")
             raise
@@ -236,12 +247,15 @@ class RegressionTester:
             bigquery.SchemaField("criteria_scores", "STRING", mode="NULLABLE"),
         ]
 
+        # Create table if it doesn't exist
         try:
             table = bigquery.Table(metrics_table, schema=schema)
-            self.bq_client.create_table(table)
+            table.clustering_fields = ["agent_name", "test_timestamp"]
+            self.bq_client.create_table(table, exists_ok=True)
+            print(f"   ✓ Table ready: {metrics_table}")
         except Conflict:
             # Table already exists, which is fine
-            print(f"   Table already exists: {metrics_table}")
+            pass
         except Exception as e:
             print(f"❌ Error creating table: {e}")
             raise
@@ -354,8 +368,9 @@ class RegressionTester:
         print("=" * 70)
         print(f"Test run: {test_run_name}")
         print(f"Test cases: {len(results)}")
-        print(f"Responses: {response_table}")
-        print(f"Metrics: {metrics_table}")
+        print(f"\nBigQuery Tables (appended):")
+        print(f"  Responses: {response_table}")
+        print(f"  Metrics: {metrics_table}")
 
         print("\nMetrics Summary:")
         if "metrics" in eval_results:
@@ -370,4 +385,7 @@ class RegressionTester:
                     score_info += f", pass_rate={scores['pass_rate']}"
                 print(f"  {criterion}: {score_info}")
 
+        print("\n💡 Query your results:")
+        print(f"   SELECT * FROM `{response_table}` WHERE test_run_name = '{test_run_name}'")
+        print(f"   SELECT * FROM `{metrics_table}` WHERE test_run_name = '{test_run_name}'")
         print("=" * 70)
