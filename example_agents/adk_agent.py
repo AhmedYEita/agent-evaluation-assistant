@@ -48,7 +48,7 @@ def create_adk_agent():
     
     # Create ADK agent first (without tools)
     agent = Agent(
-        name=config["agent_name"],
+        name="adk_agent",
         model=config["model"],
         instruction="You are a helpful assistant. Provide concise, clear answers.",
     )
@@ -60,7 +60,7 @@ def create_adk_agent():
     wrapper = enable_evaluation(
         runner, 
         config["project_id"], 
-        config["agent_name"], 
+        "adk_agent", 
         "eval_config.yaml"
     )
     

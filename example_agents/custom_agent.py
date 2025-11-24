@@ -140,7 +140,7 @@ def create_agent():
     wrapper = enable_evaluation(
         agent, 
         config["project_id"], 
-        config["agent_name"], 
+        "custom_agent", 
         "eval_config.yaml"
     )
 

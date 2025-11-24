@@ -498,20 +498,23 @@ Tool spans appear in Cloud Trace as `tool.{name}` under `agent.generate_content`
 
 ### Regression Testing
 
-Run `python run_evaluation.py` to test your current agent against the test dataset.
+Run the appropriate evaluation script to test your agent against the test dataset:
+- `python run_evaluation_custom.py` for custom agents
+- `python run_evaluation_adk.py` for ADK agents  
 
 **Configuration Options:**
 - `test_limit`: Max test cases (null = no limit)
 - `only_reviewed`: Use only reviewed cases (default: true)
 - `dataset_table`: Custom BigQuery source (null = use default table)
 
-**BigQuery Tables Created:**
+**BigQuery Tables:**
 
-| Table | Contains |
-|-------|----------|
-| `{agent_name}_eval_dataset` | Test cases: `instruction`, `reference` |
-| `{agent_name}_eval_YYYYMMDD_HHMM` | New responses: `instruction`, `reference`, `response` |
-| `{agent_name}_eval_YYYYMMDD_HHMM_metrics` | Evaluation scores |
+| Table | Contains | Notes |
+|-------|----------|-------|
+| `{agent_name}_eval_dataset` | Test cases: `instruction`, `reference` | Source data for testing |
+| `{agent_name}_eval_run` | All test runs: `instruction`, `reference`, `response`, `test_run_name`, `test_timestamp` | Appends on each run |
+| `{agent_name}_eval_metrics` | All evaluation scores: `metrics`, `criteria_scores`, `test_run_name`, `test_timestamp` | Appends on each run |
+
 
 ## Troubleshooting
 
