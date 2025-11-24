@@ -162,7 +162,7 @@ class RegressionTester:
         metrics_table = f"{self.project_id}.agent_evaluation.{self.agent_name}_eval_metrics"
 
         print("💾 Saving responses...")
-        
+
         # Add timestamp to each row
         timestamp = datetime.utcnow().isoformat()
         rows = [
@@ -170,7 +170,7 @@ class RegressionTester:
                 **result,
                 "test_run_name": test_run_name,
                 "agent_name": self.agent_name,
-                "test_timestamp": timestamp
+                "test_timestamp": timestamp,
             }
             for result in results
         ]
@@ -368,7 +368,7 @@ class RegressionTester:
         print("=" * 70)
         print(f"Test run: {test_run_name}")
         print(f"Test cases: {len(results)}")
-        print(f"\nBigQuery Tables (appended):")
+        print("\nBigQuery Tables (appended):")
         print(f"  Responses: {response_table}")
         print(f"  Metrics: {metrics_table}")
 
