@@ -540,6 +540,10 @@ class EvaluationWrapper:
         except Exception as e:
             print(f"Warning: Failed to send tool span: {e}")
 
+    def __getattr__(self, name: str) -> Any:
+        """Delegate attribute access to the wrapped agent."""
+        return getattr(self.agent, name)
+
     def __del__(self):
         try:
             self._shutdown()
