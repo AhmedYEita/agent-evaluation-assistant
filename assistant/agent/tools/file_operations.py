@@ -194,7 +194,6 @@ def copy_terraform_module_tool(
     repo_path: str,
     dest_path: str,
     project_id: str,
-    agent_name: str,
     region: str
 ) -> dict:
     """
@@ -204,7 +203,6 @@ def copy_terraform_module_tool(
         repo_path: Path to agent-evaluation-assistant repository
         dest_path: Destination project directory
         project_id: GCP project ID
-        agent_name: Agent name
         region: GCP region
     
     Returns:
@@ -246,7 +244,6 @@ module "agent_evaluation" {{
   source = "./modules/agent_evaluation"
   
   project_id = "{project_id}"
-  agent_name = "{agent_name}"
   region     = "{region}"
 }}
 '''
@@ -387,6 +384,76 @@ def verify_integration_tool(agent_file_path: str, agent_type: str) -> dict:
             "has_tool_trace": False,
             "missing_steps": [],
             "message": f"Error verifying integration: {e}"
+        }
+
+
+def check_setup_state_tool(agent_project_path: str) -> dict:
+    """
+    Check what setup steps are already completed
+    
+    Args:
+        agent_project_path: Path to the user's agent project
+    
+    Returns:
+        {
+            "has_eval_config": bool,
+            "has_terraform": bool,
+            "terraform_path": str or None,
+            "eval_config_path": str or None,
+            "message": str
+        }
+    """
+    try:
+        project_path = Path(agent_project_path).expanduser()
+        
+        if not project_path.exists():
+            return {
+                "has_eval_config": False,
+                "has_terraform": False,
+                "terraform_path": None,
+                "eval_config_path": None,
+                "message": f"Project path not found: {agent_project_path}"
+            }
+        
+        # Check for eval_config.yaml
+        eval_config_path = project_path / "eval_config.yaml"
+        has_eval_config = eval_config_path.exists()
+        
+        # Check for terraform or infra folders
+        terraform_path = None
+        has_terraform = False
+        
+        for tf_dir in ["terraform", "infra", "tf"]:
+            tf_path = project_path / tf_dir
+            if tf_path.exists() and tf_path.is_dir():
+                terraform_path = str(tf_path)
+                has_terraform = True
+                break
+        
+        status_parts = []
+        if has_eval_config:
+            status_parts.append(f"✓ eval_config.yaml exists")
+        if has_terraform:
+            status_parts.append(f"✓ terraform folder exists at {terraform_path}")
+        
+        if not status_parts:
+            status_parts.append("No setup detected yet")
+        
+        return {
+            "has_eval_config": has_eval_config,
+            "has_terraform": has_terraform,
+            "terraform_path": terraform_path,
+            "eval_config_path": str(eval_config_path) if has_eval_config else None,
+            "message": "; ".join(status_parts)
+        }
+    
+    except Exception as e:
+        return {
+            "has_eval_config": False,
+            "has_terraform": False,
+            "terraform_path": None,
+            "eval_config_path": None,
+            "message": f"Error checking setup state: {e}"
         }
 
 

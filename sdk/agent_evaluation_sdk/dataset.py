@@ -134,6 +134,13 @@ class DatasetCollector:
 
                 if load_job.errors:
                     print(f"Warning: Errors loading data to BigQuery: {load_job.errors}")
+                else:
+                    # Successfully loaded data
+                    num_rows = len(buffer_to_write)
+                    print(
+                        f"✅ Wrote {num_rows} interaction(s) "
+                        f"to BigQuery table: {self.storage_location}"
+                    )
 
             finally:
                 # Clean up temp file
@@ -196,11 +203,20 @@ class DatasetCollector:
         # Set clustering for better query performance
         table.clustering_fields = ["agent_name", "timestamp"]
 
+        # Check if table exists before trying to create it
+        table_exists = False
         try:
-            self.bq_client.create_table(table, exists_ok=True)
-            print(f"Created BigQuery table: {self.storage_location}")
+            self.bq_client.get_table(self.storage_location)
+            table_exists = True
         except Exception:
-            pass  # Table already exists
+            pass
+
+        if not table_exists:
+            try:
+                self.bq_client.create_table(table, exists_ok=True)
+                print(f"Created BigQuery table: {self.storage_location}")
+            except Exception:
+                pass  # Table might have been created by another process
 
     def _serialize(self, data: Any) -> str:
         """Serialize data to JSON string."""
