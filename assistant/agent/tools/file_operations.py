@@ -1,47 +1,29 @@
-"""
-File operation tools for the assistant agent
-"""
+"""File reading tools for the assistant agent"""
 
 import shutil
+import yaml
 from pathlib import Path
 
 
-def check_repo_exists_tool(repo_path: str) -> dict:
+def read_file_tool(file_path: str) -> dict:
     """
-    Check if agent-evaluation-assistant repository exists
+    Read any file (examples, docs, source code, user's agent)
     
     Args:
-        repo_path: Path to check (use empty string to search from current location)
+        file_path: Path to file to read
     
     Returns:
-        {
-            "exists": bool,
-            "path": str or None,
-            "message": str
-        }
+        {"success": bool, "content": str, "message": str}
     """
-    # Try to find repo
-    if repo_path:
-        check_path = Path(repo_path)
-    else:
-        # Search from typical locations
-        check_path = Path.cwd()
-    
-    # Look for repo markers
-    for _ in range(5):
-        if (check_path / "sdk").exists() and (check_path / "terraform").exists():
-            return {
-                "exists": True,
-                "path": str(check_path),
-                "message": f"Repository found at: {check_path}"
-            }
-        check_path = check_path.parent
-    
-    return {
-        "exists": False,
-        "path": None,
-        "message": "Repository not found. User needs to clone it."
-    }
+    try:
+        path = Path(file_path).expanduser()
+        if not path.exists():
+            return {"success": False, "content": "", "message": f"File not found: {file_path}"}
+        
+        content = path.read_text()
+        return {"success": True, "content": content, "message": f"Read {path.name} ({len(content)} chars)"}
+    except Exception as e:
+        return {"success": False, "content": "", "message": f"Error: {e}"}
 
 
 def check_agent_compatibility_tool(agent_file_path: str) -> dict:
@@ -116,6 +98,183 @@ def check_agent_compatibility_tool(agent_file_path: str) -> dict:
         }
 
 
+def check_eval_config_exists_tool(agent_directory: str) -> dict:
+    """
+    Check if eval_config.yaml exists in the agent directory
+    
+    Args:
+        agent_directory: Path to agent project
+    
+    Returns:
+        {
+            "exists": bool,
+            "path": str or None,
+            "message": str
+        }
+    """
+    try:
+        dir_path = Path(agent_directory).expanduser()
+        if not dir_path.exists():
+            return {
+                "exists": False,
+                "path": None,
+                "message": f"Directory not found: {agent_directory}"
+            }
+        
+        config_path = dir_path / "eval_config.yaml"
+        exists = config_path.exists()
+        
+        return {
+            "exists": exists,
+            "path": str(config_path) if exists else None,
+            "message": "✓ Found eval_config.yaml" if exists else ""
+        }
+    except Exception as e:
+        return {
+            "exists": False,
+            "path": None,
+            "message": f"Error: {e}"
+        }
+
+
+def check_terraform_exists_tool(agent_directory: str) -> dict:
+    """
+    Check if terraform folder exists in the agent directory
+    
+    Args:
+        agent_directory: Path to agent project
+    
+    Returns:
+        {
+            "exists": bool,
+            "path": str or None,
+            "message": str
+        }
+    """
+    try:
+        dir_path = Path(agent_directory).expanduser()
+        if not dir_path.exists():
+            return {
+                "exists": False,
+                "path": None,
+                "message": f"Directory not found: {agent_directory}"
+            }
+        
+        # Check for common terraform folder names
+        for tf_dir in ["terraform", "infra", "tf"]:
+            tf_path = dir_path / tf_dir
+            if tf_path.exists() and tf_path.is_dir():
+                return {
+                    "exists": True,
+                    "path": str(tf_path),
+                    "message": f"✓ Found {tf_dir}/ directory"
+                }
+        
+        return {
+            "exists": False,
+            "path": None,
+            "message": ""
+        }
+    except Exception as e:
+        return {
+            "exists": False,
+            "path": None,
+            "message": f"Error: {e}"
+        }
+
+
+def check_sdk_integration_tool(agent_file_path: str) -> dict:
+    """
+    Check if SDK is integrated in the agent file and validate the integration
+    
+    Args:
+        agent_file_path: Path to agent file
+    
+    Returns:
+        {
+            "integrated": bool,
+            "has_import": bool,
+            "has_enable_evaluation": bool,
+            "has_wrapper": bool,
+            "has_flush": bool,
+            "has_shutdown": bool,
+            "has_tool_trace": bool,
+            "missing_steps": list,
+            "message": str
+        }
+    """
+    try:
+        path = Path(agent_file_path).expanduser()
+        if not path.exists():
+            return {
+                "integrated": False,
+                "has_import": False,
+                "has_enable_evaluation": False,
+                "has_wrapper": False,
+                "has_flush": False,
+                "has_shutdown": False,
+                "has_tool_trace": False,
+                "missing_steps": ["File not found"],
+                "message": f"File not found: {agent_file_path}"
+            }
+        
+        content = path.read_text()
+        
+        # Check for integration components
+        has_import = 'from agent_evaluation_sdk import enable_evaluation' in content or 'import agent_evaluation_sdk' in content
+        has_enable_evaluation = 'enable_evaluation(' in content
+        has_wrapper = 'wrapper' in content and '= enable_evaluation(' in content
+        has_flush = 'wrapper.flush()' in content or 'await wrapper.flush()' in content
+        has_shutdown = 'wrapper.shutdown()' in content or 'await wrapper.shutdown()' in content
+        has_tool_trace = '@wrapper.tool_trace' in content or 'wrapper.tool_trace(' in content
+        
+        # Determine what's missing
+        missing_steps = []
+        if not has_import:
+            missing_steps.append("Import enable_evaluation")
+        if not has_enable_evaluation:
+            missing_steps.append("Call enable_evaluation()")
+        if not has_wrapper:
+            missing_steps.append("Store wrapper variable")
+        if not has_flush:
+            missing_steps.append("Add wrapper.flush()")
+        if not has_shutdown:
+            missing_steps.append("Add wrapper.shutdown()")
+        
+        integrated = has_import and has_enable_evaluation and has_wrapper
+        
+        if integrated:
+            validation_msg = "✓ SDK integrated in this file"
+            if not has_flush or not has_shutdown:
+                validation_msg += "\n⚠️ Missing cleanup: " + ", ".join(missing_steps)
+        else:
+            validation_msg = ""
+        
+        return {
+            "integrated": integrated,
+            "has_import": has_import,
+            "has_enable_evaluation": has_enable_evaluation,
+            "has_wrapper": has_wrapper,
+            "has_flush": has_flush,
+            "has_shutdown": has_shutdown,
+            "has_tool_trace": has_tool_trace,
+            "missing_steps": missing_steps,
+            "message": validation_msg
+        }
+    except Exception as e:
+        return {
+            "integrated": False,
+            "has_import": False,
+            "has_enable_evaluation": False,
+            "has_wrapper": False,
+            "has_flush": False,
+            "has_shutdown": False,
+            "has_tool_trace": False,
+            "missing_steps": [],
+            "message": f"Error: {e}"
+        }
+
+
 def copy_config_template_tool(
     repo_path: str,
     dest_path: str,
@@ -143,16 +302,27 @@ def copy_config_template_tool(
         }
     """
     try:
-        import yaml
+        repo = Path(repo_path).expanduser()
         
-        template_path = Path(repo_path) / "sdk/agent_evaluation_sdk/templates/eval_config.template.yaml"
-        dest_file = Path(dest_path) / "eval_config.yaml"
+        # Try to find the repo root if a subdirectory was provided
+        # Look for sdk/ directory going up the path
+        check_path = repo
+        for _ in range(5):  # Check up to 5 levels up
+            if (check_path / "sdk").exists() and (check_path / "terraform").exists():
+                repo = check_path
+                break
+            if check_path.parent == check_path:  # Reached filesystem root
+                break
+            check_path = check_path.parent
+        
+        template_path = repo / "sdk/agent_evaluation_sdk/templates/eval_config.template.yaml"
+        dest_file = Path(dest_path).expanduser() / "eval_config.yaml"
         
         if not template_path.exists():
             return {
                 "success": False,
                 "config_path": None,
-                "message": f"Template not found at: {template_path}"
+                "message": f"Template not found at: {template_path}. Please provide the ROOT path of agent-evaluation-assistant repository (should contain sdk/, terraform/, example_agents/ folders)."
             }
         
         # Read template
@@ -214,9 +384,30 @@ def copy_terraform_module_tool(
         }
     """
     try:
-        terraform_src = Path(repo_path) / "terraform"
-        terraform_dest = Path(dest_path) / "terraform/modules/agent_evaluation"
-        main_tf_path = Path(dest_path) / "terraform/main.tf"
+        repo = Path(repo_path).expanduser()
+        
+        # Try to find the repo root if a subdirectory was provided
+        # Look for terraform/ directory going up the path
+        check_path = repo
+        for _ in range(5):  # Check up to 5 levels up
+            if (check_path / "terraform").exists() and (check_path / "sdk").exists():
+                repo = check_path
+                break
+            if check_path.parent == check_path:  # Reached filesystem root
+                break
+            check_path = check_path.parent
+        
+        terraform_src = repo / "terraform"
+        terraform_dest = Path(dest_path).expanduser() / "terraform/modules/agent_evaluation"
+        main_tf_path = Path(dest_path).expanduser() / "terraform/main.tf"
+        
+        if not terraform_src.exists():
+            return {
+                "success": False,
+                "terraform_path": None,
+                "main_tf_created": False,
+                "message": f"Terraform directory not found at: {terraform_src}. Please provide the ROOT path of agent-evaluation-assistant repository."
+            }
         
         # Copy terraform module
         shutil.copytree(terraform_src, terraform_dest, dirs_exist_ok=True)
@@ -265,195 +456,3 @@ module "agent_evaluation" {{
             "main_tf_created": False,
             "message": f"Error copying terraform: {e}"
         }
-
-
-def read_agent_file_tool(agent_file_path: str) -> dict:
-    """
-    Read the contents of an agent file to verify integration
-    
-    Args:
-        agent_file_path: Path to the agent Python file
-    
-    Returns:
-        {
-            "success": bool,
-            "content": str,
-            "message": str
-        }
-    """
-    try:
-        agent_path = Path(agent_file_path).expanduser()
-        
-        if not agent_path.exists():
-            return {
-                "success": False,
-                "content": "",
-                "message": f"File not found: {agent_file_path}"
-            }
-        
-        content = agent_path.read_text()
-        
-        return {
-            "success": True,
-            "content": content,
-            "message": f"✓ Successfully read {agent_path.name}"
-        }
-    
-    except Exception as e:
-        return {
-            "success": False,
-            "content": "",
-            "message": f"Error reading file: {e}"
-        }
-
-
-def verify_integration_tool(agent_file_path: str, agent_type: str) -> dict:
-    """
-    Verify that SDK integration is correctly implemented
-    
-    Args:
-        agent_file_path: Path to the agent Python file
-        agent_type: Type of agent ("adk" or "custom")
-    
-    Returns:
-        {
-            "integrated": bool,
-            "has_import": bool,
-            "has_enable_evaluation": bool,
-            "has_wrapper": bool,
-            "has_tool_trace": bool,
-            "missing_steps": list,
-            "message": str
-        }
-    """
-    try:
-        agent_path = Path(agent_file_path).expanduser()
-        
-        if not agent_path.exists():
-            return {
-                "integrated": False,
-                "has_import": False,
-                "has_enable_evaluation": False,
-                "has_wrapper": False,
-                "has_tool_trace": False,
-                "missing_steps": ["File not found"],
-                "message": f"File not found: {agent_file_path}"
-            }
-        
-        content = agent_path.read_text()
-        
-        # Check for required integration components
-        has_import = 'from agent_evaluation_sdk import enable_evaluation' in content
-        has_enable_evaluation = 'enable_evaluation(' in content
-        has_wrapper = 'wrapper' in content
-        has_tool_trace = '@wrapper.tool_trace' in content or 'wrapper.tool_trace' in content
-        
-        missing_steps = []
-        if not has_import:
-            missing_steps.append("Import enable_evaluation from agent_evaluation_sdk")
-        if not has_enable_evaluation:
-            missing_steps.append("Call enable_evaluation() to wrap the agent/runner")
-        if not has_wrapper:
-            missing_steps.append("Store the wrapper returned by enable_evaluation()")
-        
-        integrated = has_import and has_enable_evaluation and has_wrapper
-        
-        if integrated:
-            message = "✓ SDK integration looks good!"
-            if not has_tool_trace:
-                message += " Note: No tool tracing detected - add @wrapper.tool_trace decorators to track tool calls."
-        else:
-            message = f"Integration incomplete. Missing: {', '.join(missing_steps)}"
-        
-        return {
-            "integrated": integrated,
-            "has_import": has_import,
-            "has_enable_evaluation": has_enable_evaluation,
-            "has_wrapper": has_wrapper,
-            "has_tool_trace": has_tool_trace,
-            "missing_steps": missing_steps,
-            "message": message
-        }
-    
-    except Exception as e:
-        return {
-            "integrated": False,
-            "has_import": False,
-            "has_enable_evaluation": False,
-            "has_wrapper": False,
-            "has_tool_trace": False,
-            "missing_steps": [],
-            "message": f"Error verifying integration: {e}"
-        }
-
-
-def check_setup_state_tool(agent_project_path: str) -> dict:
-    """
-    Check what setup steps are already completed
-    
-    Args:
-        agent_project_path: Path to the user's agent project
-    
-    Returns:
-        {
-            "has_eval_config": bool,
-            "has_terraform": bool,
-            "terraform_path": str or None,
-            "eval_config_path": str or None,
-            "message": str
-        }
-    """
-    try:
-        project_path = Path(agent_project_path).expanduser()
-        
-        if not project_path.exists():
-            return {
-                "has_eval_config": False,
-                "has_terraform": False,
-                "terraform_path": None,
-                "eval_config_path": None,
-                "message": f"Project path not found: {agent_project_path}"
-            }
-        
-        # Check for eval_config.yaml
-        eval_config_path = project_path / "eval_config.yaml"
-        has_eval_config = eval_config_path.exists()
-        
-        # Check for terraform or infra folders
-        terraform_path = None
-        has_terraform = False
-        
-        for tf_dir in ["terraform", "infra", "tf"]:
-            tf_path = project_path / tf_dir
-            if tf_path.exists() and tf_path.is_dir():
-                terraform_path = str(tf_path)
-                has_terraform = True
-                break
-        
-        status_parts = []
-        if has_eval_config:
-            status_parts.append(f"✓ eval_config.yaml exists")
-        if has_terraform:
-            status_parts.append(f"✓ terraform folder exists at {terraform_path}")
-        
-        if not status_parts:
-            status_parts.append("No setup detected yet")
-        
-        return {
-            "has_eval_config": has_eval_config,
-            "has_terraform": has_terraform,
-            "terraform_path": terraform_path,
-            "eval_config_path": str(eval_config_path) if has_eval_config else None,
-            "message": "; ".join(status_parts)
-        }
-    
-    except Exception as e:
-        return {
-            "has_eval_config": False,
-            "has_terraform": False,
-            "terraform_path": None,
-            "eval_config_path": None,
-            "message": f"Error checking setup state: {e}"
-        }
-
-
