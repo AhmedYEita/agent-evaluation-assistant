@@ -21,17 +21,16 @@ A lightweight Python SDK and Terraform infrastructure that enables comprehensive
 
 ### 1. Clone & Install SDK (Separate from Your Agent)
 
-Clone this repo **outside** your agent project:
+Clone this repo **outside** your agent project directory:
 
 ```bash
-# Clone in a separate location (e.g., ~/repos, ~/projects)
-cd ~/repos
-git clone https://github.com/yourorg/agent-evaluation-assistant
+cd ~/repos  # or wherever you keep repositories
+git clone https://github.com/AhmedYEita/agent-evaluation-assistant
 cd agent-evaluation-assistant
 pip install -e ./sdk
 ```
 
-**Directory structure:**
+**Important:** Keep the SDK repo **separate** from your agent project:
 ```
 ~/repos/
 ├── agent-evaluation-assistant/     # ← SDK repo (clone here)

@@ -138,8 +138,8 @@ class DatasetCollector:
                     # Successfully loaded data
                     num_rows = len(buffer_to_write)
                     print(
-                        f"✅ Wrote {num_rows} interaction(s) "
-                        f"to BigQuery table: {self.storage_location}"
+                        f"✅ Wrote {num_rows} interaction(s) to "
+                        f"BigQuery table: {self.storage_location}"
                     )
 
             finally:
@@ -164,9 +164,7 @@ class DatasetCollector:
     def _ensure_table_exists(self) -> None:
         """Create BigQuery table for test dataset if it doesn't exist."""
         # Ensure dataset exists first
-        dataset_id = self.storage_location.split(".")[
-            1
-        ]  # Extract dataset from project.dataset.table
+        dataset_id = self.storage_location.split(".")[1]
         dataset_ref = f"{self.project_id}.{dataset_id}"
 
         try:
@@ -187,12 +185,10 @@ class DatasetCollector:
             bigquery.SchemaField("agent_name", "STRING", mode="REQUIRED"),
             bigquery.SchemaField("timestamp", "TIMESTAMP", mode="REQUIRED"),
             # Test case fields
-            bigquery.SchemaField("instruction", "STRING", mode="REQUIRED"),  # User query/prompt
-            bigquery.SchemaField(
-                "reference", "STRING", mode="REQUIRED"
-            ),  # Ground truth (agent's response, can be updated after review)
-            bigquery.SchemaField("context", "STRING", mode="NULLABLE"),  # Optional context
-            bigquery.SchemaField("reviewed", "BOOLEAN", mode="NULLABLE"),  # Manual review flag
+            bigquery.SchemaField("instruction", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("reference", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("context", "STRING", mode="NULLABLE"),
+            bigquery.SchemaField("reviewed", "BOOLEAN", mode="NULLABLE"),
             # Additional fields for debugging
             bigquery.SchemaField("metadata", "JSON", mode="NULLABLE"),
             bigquery.SchemaField("trajectory", "JSON", mode="NULLABLE"),

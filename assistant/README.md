@@ -4,23 +4,27 @@ An **ADK-based conversational agent** that helps users set up agent evaluation i
 
 ## Quick Start
 
-### Step 1: Clone the SDK Repository (Separate from Your Agent)
+### Step 1: Clone the SDK Repository Inside Your Agent Project
 
-Clone this repo **outside** your agent project directory:
+Clone this repo **inside** your agent project directory:
 
 ```bash
-# Clone SDK in a separate location (e.g., ~/repos, ~/projects)
-cd ~/repos  # or wherever you keep repositories
+# Clone SDK inside your agent project
+cd my-agent-project  # Your agent project directory
 git clone https://github.com/AhmedYEita/agent-evaluation-assistant
 cd agent-evaluation-assistant
 pip install -e ./sdk
 ```
 
-**Important:** Keep the SDK repo **separate** from your agent project:
+**Directory structure:**
 ```
-~/repos/
-├── agent-evaluation-assistant/     # ← SDK repo (clone here)
-└── my-agent-project/           # ← Your agent (existing project)
+my-agent-project/                # ← Your agent project
+├── agent.py
+├── agent-evaluation-assistant/  # ← SDK repo (cloned here)
+│   ├── sdk/
+│   ├── example_agents/
+│   └── terraform/
+└── ...
 ```
 
 ### Step 2: Run the Assistant
