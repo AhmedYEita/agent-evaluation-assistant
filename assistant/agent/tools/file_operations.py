@@ -456,3 +456,76 @@ module "agent_evaluation" {{
             "main_tf_created": False,
             "message": f"Error copying terraform: {e}"
         }
+
+
+def copy_sdk_folder_tool(
+    repo_path: str,
+    dest_path: str
+) -> dict:
+    """
+    Copy SDK folder to agent project directory
+    
+    Args:
+        repo_path: Path to agent-evaluation-assistant repository root
+        dest_path: Agent project root directory
+        
+    Returns:
+        {
+            "success": bool,
+            "sdk_path": str,
+            "copied": bool,  # True if just copied, False if already exists
+            "message": str
+        }
+    """
+    try:
+        repo = Path(repo_path).expanduser()
+        
+        # Try to find the repo root if a subdirectory was provided
+        check_path = repo
+        for _ in range(5):  # Check up to 5 levels up
+            if (check_path / "sdk").exists() and (check_path / "terraform").exists():
+                repo = check_path
+                break
+            if check_path.parent == check_path:  # Reached filesystem root
+                break
+            check_path = check_path.parent
+        
+        sdk_src = repo / "sdk" / "agent_evaluation_sdk"
+        sdk_dest = Path(dest_path).expanduser() / "agent_evaluation_sdk"
+        
+        if not sdk_src.exists():
+            return {
+                "success": False,
+                "sdk_path": None,
+                "copied": False,
+                "message": f"SDK source not found at: {sdk_src}. Please provide the ROOT path of agent-evaluation-assistant repository."
+            }
+        
+        # Check if SDK folder already exists
+        copied = False
+        if sdk_dest.exists():
+            return {
+                "success": True,
+                "sdk_path": str(sdk_dest),
+                "copied": False,
+                "message": f"✓ SDK folder already exists at: {sdk_dest}"
+            }
+        
+        # Copy SDK folder
+        shutil.copytree(sdk_src, sdk_dest)
+        copied = True
+        
+        return {
+            "success": True,
+            "sdk_path": str(sdk_dest),
+            "copied": True,
+            "message": f"✓ Copied SDK folder to: {sdk_dest}"
+        }
+    
+    except Exception as e:
+        return {
+            "success": False,
+            "sdk_path": None,
+            "copied": False,
+            "message": f"Error copying SDK folder: {e}"
+        }
