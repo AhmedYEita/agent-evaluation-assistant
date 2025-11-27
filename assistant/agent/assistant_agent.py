@@ -62,6 +62,8 @@ def create_assistant():
         read_file_tool,
         validate_config_tool,
         check_infrastructure_tool,
+        add_evaluation_config_tool,
+        generate_evaluation_script_tool,
     ]
     
     agent = Agent(

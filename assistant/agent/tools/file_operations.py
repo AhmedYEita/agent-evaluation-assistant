@@ -1,6 +1,7 @@
 """File reading and checking tools for the assistant agent"""
 
 from pathlib import Path
+from typing import Optional
 
 
 def read_file_tool(file_path: str) -> dict:
