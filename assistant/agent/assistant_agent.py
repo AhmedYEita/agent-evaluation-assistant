@@ -20,7 +20,9 @@ from tools.file_operations import (
     check_sdk_integration_tool,
     copy_config_template_tool,
     copy_terraform_module_tool,
-    copy_sdk_folder_tool
+    copy_sdk_folder_tool,
+    add_evaluation_config_tool,
+    generate_evaluation_script_tool
 )
 from tools.config_validator import validate_config_tool
 from tools.infra_checker import check_infrastructure_tool
@@ -57,7 +59,9 @@ Expected structure:
 - check_eval_config_exists_tool: Check if eval_config.yaml exists
 - check_terraform_exists_tool: Check if terraform/ folder exists
 - check_sdk_integration_tool: Check if SDK is integrated and validate
-- copy_config_template_tool: Generate eval_config.yaml with user preferences
+- copy_config_template_tool: Generate eval_config.yaml with user preferences (includes enable_evaluation parameter)
+- add_evaluation_config_tool: Add genai_eval and regression sections to existing eval_config.yaml
+- generate_evaluation_script_tool: Generate run_evaluation.py script template based on agent type
 - copy_terraform_module_tool: Copy terraform module and create main.tf
 - validate_config_tool: Validate YAML configs
 - check_infrastructure_tool: Check GCP infrastructure
@@ -203,23 +207,34 @@ Brief explanation (2-3 sentences):
 - "You must review the table and set reviewed=TRUE for each entry"
 - "Recommend FALSE unless actively collecting ground truth data"
 
-**7. GENERATE eval_config.yaml**
+**7. GEN AI EVALUATION**
+Ask separately: "Do you want to set up Gen AI Evaluation? This allows you to run quality tests (BLEU, ROUGE, coherence, fluency, etc.) on your agent."
+Brief explanation:
+- "Gen AI Evaluation lets you test your agent's quality against a dataset"
+- "You can run evaluation scripts to compare responses over time"
+- "You can add this later if you skip it now"
+- If they say yes: Set enable_evaluation=True
+- If they say no or skip: Set enable_evaluation=False
+
+**8. GENERATE eval_config.yaml**
 Use copy_config_template_tool with:
 - repo_path: The assistant repo ROOT path they provided (must be root, not subdirectory)
 - dest_path: Their agent project root directory
 - enable_logging, enable_tracing, enable_metrics: From step 5
 - auto_collect: From step 6
+- enable_evaluation: From step 7 (True/False)
 - Display the "message" field showing what was created
 - After creating the config, acknowledge it before moving to next step
 - Optionally use validate_config_tool to verify the generated config
+- If enable_evaluation=False: Mention "You can add evaluation later using add_evaluation_config_tool"
 
-**8. READ RESOURCES**
+**9. READ RESOURCES**
 Read these files using read_file_tool before showing integration steps:
 1. Example agent: assistant_repo_path + "/example_agents/adk_agent.py" (if ADK) OR "/example_agents/custom_agent.py" (if custom)
 2. README: assistant_repo_path + "/README.md"
 3. SETUP guide: assistant_repo_path + "/SETUP.md"
 
-**9. SHOW SDK INTEGRATION OVERVIEW**
+**10. SHOW SDK INTEGRATION OVERVIEW**
 - First, explain the high-level steps required:
     * Import the SDK
     * Wrap your runner/agent with enable_evaluation
@@ -229,7 +244,7 @@ Read these files using read_file_tool before showing integration steps:
 - Don't show any code yet
 - Then say you'll now guide them through each step with detailed instructions
 
-**10. GUIDE DETAILED SDK INTEGRATION STEP-BY-STEP**
+**11. GUIDE DETAILED SDK INTEGRATION STEP-BY-STEP**
 - Read their ENTIRE agent file first using read_file_tool
 - Determine their agent type (ADK or Custom)
 - For EACH step, provide detailed instructions ONE AT A TIME:
@@ -254,12 +269,12 @@ Read these files using read_file_tool before showing integration steps:
 - Explain where to place them (before exit)
 - Wait for confirmation or questions
 
-**10. VERIFY INTEGRATION**
+**12. VERIFY INTEGRATION**
 - Use verify_integration_tool to check their agent file
 - Confirm all required pieces are in place
 - Help fix any issues found
 
-**11. INFRASTRUCTURE SETUP**
+**13. INFRASTRUCTURE SETUP**
 Ask: "Would you like to set up the GCP infrastructure (BigQuery, Cloud Logging, etc.)?"
 
 If yes, ask: "Do you already have a terraform folder in your project?"
@@ -289,7 +304,7 @@ module "agent_evaluation" {
 - Creates main.tf with provider and module configuration
 - Display the "message" field showing what was created
 
-**12. TERRAFORM EXECUTION**
+**14. TERRAFORM EXECUTION**
 Guide them through terraform commands
 - Show exact commands to run
 - `cd terraform`
@@ -297,14 +312,27 @@ Guide them through terraform commands
 - `terraform apply`
 - Explain what each does briefly
 
-**13. WRAP UP**
+**15. GENERATE EVALUATION SCRIPT (if enable_evaluation=True)**
+If the user enabled evaluation in step 7:
+- Ask: "What's the name of your agent file? (e.g., my_agent.py)"
+- Use generate_evaluation_script_tool with:
+  - agent_directory: Their agent project root directory
+  - agent_type: From step 3 ("adk" or "custom")
+  - agent_name: From step 4
+  - agent_file_name: From user's answer
+- Display the "message" field showing what was created
+- Explain: "This is a template script. You'll need to customize the TODO sections to match your agent structure."
+- Provide brief guidance on what to customize
+
+**16. WRAP UP**
 - ✅ Confirm setup is complete
 - Show how to run their agent
 - ⚠️ If auto_collect enabled: Remind to disable after data collection
 - Show how to review BigQuery table
-- Provide next steps for evaluation
+- If evaluation enabled: Mention "Run python run_evaluation.py after collecting and reviewing test data"
+- If evaluation NOT enabled: Mention "You can add evaluation later - just ask me to add it!"
 
-**14. CLEANUP (OPTIONAL)**
+**17. CLEANUP (OPTIONAL)**
 - Explain: "The SDK folder has been copied to your agent project, so you have everything you need"
 - Tell them: "You can now delete the agent-evaluation-assistant repository if you no longer need it"
 - Explain: "The SDK code is now in your agent project at: agent_evaluation_sdk/"
@@ -314,12 +342,20 @@ Next steps:
 - Run your agent to test
 - Check BigQuery for collected data
 - Review traces in Cloud Console
+- If evaluation enabled: Customize and run run_evaluation.py
 - (Optional) Delete the agent-evaluation-assistant repo if not needed
 
 We're done! 🎉
 
+=== ADDING EVALUATION LATER ===
+If a user already has eval_config.yaml but wants to add evaluation:
+1. Check if eval_config.yaml exists using check_eval_config_exists_tool
+2. If exists: Use add_evaluation_config_tool to add genai_eval and regression sections
+3. Then use generate_evaluation_script_tool to create the evaluation script
+4. Guide them through customizing the script
+
 === CRITICAL: READ EXAMPLES BEFORE INTEGRATION ===
-Before showing integration steps (Step 9), you MUST:
+Before showing integration steps (Step 10), you MUST:
 1. Read the example agent file (adk_agent.py or custom_agent.py)
 2. Read README.md
 3. Read SETUP.md
@@ -361,6 +397,8 @@ def create_assistant():
         read_file_tool,
         validate_config_tool,
         check_infrastructure_tool,
+        add_evaluation_config_tool,
+        generate_evaluation_script_tool,
     ]
     
     agent = Agent(
