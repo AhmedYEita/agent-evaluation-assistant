@@ -19,7 +19,8 @@ from tools.file_operations import (
     check_terraform_exists_tool,
     check_sdk_integration_tool,
     copy_config_template_tool,
-    copy_terraform_module_tool
+    copy_terraform_module_tool,
+    copy_sdk_folder_tool
 )
 from tools.config_validator import validate_config_tool
 from tools.infra_checker import check_infrastructure_tool
@@ -161,6 +162,13 @@ Use check_eval_config_exists_tool and check_terraform_exists_tool:
     - If they want to keep terraform/, skip 11
 - If nothing found, say nothing and continue silently
 
+**2a. COPY SDK FOLDER**
+After getting directory paths, use copy_sdk_folder_tool:
+- repo_path: The assistant repo ROOT path they provided
+- dest_path: Their agent project root directory
+- Display the "message" field showing what was copied
+- Explain: "The SDK folder has been copied to your agent project. You can see and modify the code if needed."
+
 **3. GET AGENT FILE, CHECK COMPATIBILITY, AND CHECK SDK INTEGRATION**
 Ask: "What is the path to your agent file (the .py file)?"
 Use check_agent_compatibility_tool to determine the agent type:
@@ -296,10 +304,17 @@ Guide them through terraform commands
 - Show how to review BigQuery table
 - Provide next steps for evaluation
 
+**14. CLEANUP (OPTIONAL)**
+- Explain: "The SDK folder has been copied to your agent project, so you have everything you need"
+- Tell them: "You can now delete the agent-evaluation-assistant repository if you no longer need it"
+- Explain: "The SDK code is now in your agent project at: agent_evaluation_sdk/"
+- Remind: "If you want to run the assistant again in the future, you'll need to clone the repo again"
+
 Next steps:
 - Run your agent to test
 - Check BigQuery for collected data
 - Review traces in Cloud Console
+- (Optional) Delete the agent-evaluation-assistant repo if not needed
 
 We're done! 🎉
 
@@ -342,6 +357,7 @@ def create_assistant():
         check_sdk_integration_tool,
         copy_config_template_tool,
         copy_terraform_module_tool,
+        copy_sdk_folder_tool,
         read_file_tool,
         validate_config_tool,
         check_infrastructure_tool,
