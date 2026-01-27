@@ -46,7 +46,7 @@ cd agent-evaluation-assistant
 gcloud projects list
 
 # Set your project ID (replace with your actual project ID)
-export PROJECT_ID="gcp-project-id"
+export PROJECT_ID="your-gcp-project-id"
 
 # Set active project
 gcloud config set project $PROJECT_ID
@@ -339,7 +339,7 @@ agent = YourAgent(...)
 # Enable evaluation - that's it!
 wrapper = enable_evaluation(
     agent=agent,
-    project_id="GCP_PROJECT_ID",
+    project_id="your-gcp-project-id",
     agent_name="agent-name",
     config_path="eval_config.yaml"
 )
@@ -396,7 +396,7 @@ Then load it in your agent:
 ```python
 from agent_evaluation_sdk import enable_evaluation
 
-wrapper = enable_evaluation(agent, "GCP_PROJECT_ID", "my-agent", "eval_config.yaml")
+wrapper = enable_evaluation(agent, "your-gcp-project-id", "my-agent", "eval_config.yaml")
 ```
 
 ### Configure Alerts (Optional)
