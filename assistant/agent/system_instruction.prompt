@@ -60,8 +60,8 @@ from agent_evaluation_sdk import enable_evaluation
 # Wrap the RUNNER (not the agent)
 wrapper = enable_evaluation(
     runner,  # InMemoryRunner instance
-    "PROJECT_ID",
-    "AGENT_NAME",
+    "your-gcp-project-id",
+    "agent-name",
     "eval_config.yaml"
 )
 
@@ -87,8 +87,8 @@ from agent_evaluation_sdk import enable_evaluation
 # Wrap the AGENT (with generate_content method)
 wrapper = enable_evaluation(
     agent,  # Agent instance
-    "PROJECT_ID",
-    "AGENT_NAME",
+    "your-gcp-project-id",
+    "agent-name",
     "eval_config.yaml"
 )
 
@@ -262,7 +262,7 @@ If yes, ask: "Do you already have a terraform folder in your project?"
 module "agent_evaluation" {
   source = "./modules/agent_evaluation"
   
-  project_id = "PROJECT_ID"
+  project_id = "your-gcp-project-id"
   region     = "us-central1"
 }
 ```

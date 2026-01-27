@@ -28,9 +28,6 @@ dev = [
     "types-PyYAML>=6.0.0",
 ]
 
-[project.scripts]
-agent-eval-assistant = "agent_evaluation_sdk.cli:main"
-
 [tool.setuptools.package-data]
 agent_evaluation_sdk = ["templates/*.yaml"]
 

@@ -1,22 +1,21 @@
 # Agent Evaluation Assistant
 
-**Production-ready evaluation infrastructure for AI agents with automated monitoring, testing, and quality evaluation.**
+**Production-ready evaluation infrastructure for AI agents with one-line integration.**
 
 ## Overview
 
-A lightweight Python SDK and Terraform infrastructure that enables comprehensive evaluation for Google ADK agents with minimal code changes. Get structured logging, performance tracing, metrics dashboards, dataset collection, and quality testing by adding just one line of code to your agent.
+A Python SDK and Terraform infrastructure for comprehensive agent evaluation with minimal code changes. Get structured logging, performance tracing, metrics dashboards, dataset collection, and quality testing by adding a single line of code.
 
 ### Key Features
 
-- **One-Line Integration**: Enable full evaluation with a single function call
-- **Setup Assistant**: Interactive CLI tool to guide you through setup
-- **Zero-Latency Observability**: All Cloud API calls run in background threads
-- **Automated Data Collection**: Logs, traces, metrics, and datasets captured automatically
+- **One-Line Integration**: `enable_evaluation(agent, project_id, agent_name, config)`
+- **Setup Assistant**: Interactive ADK agent guides you through setup
+- **Zero-Latency**: All Cloud API calls run in background threads
+- **Automated Observability**: Logs, traces, metrics, and datasets captured automatically
 - **Production-Ready**: Built on GCP services (Cloud Logging, Trace, Monitoring, BigQuery)
 - **Quality Evaluation**: Vertex AI Gen AI Evaluation Service for automated and model-based metrics
 - **Infrastructure as Code**: Reproducible Terraform deployment
-- **Flexible Configuration**: Enable/disable services and tune performance per environment
-
+- **Flexible Configuration**: Enable/disable services and tune performance
 ## 🚀 Quick Start
 
 ### 1. Clone & Install SDK (Separate from Your Agent)
@@ -37,10 +36,10 @@ pip install -e ./sdk
 └── my-agent-project/           # ← Your agent (existing project)
 ```
 
-### 2. Run Setup Assistant
+### 2. Run Setup Assistant (Recommended)
 
 ```bash
-cd agent-evaluation-assistant/assistant/agent
+cd assistant/agent
 python assistant_agent.py
 ```
 
@@ -51,123 +50,111 @@ The assistant will guide you through:
 - ✅ Setting up Terraform infrastructure **in your project**
 - ✅ Showing integration code
 
-**Or manually configure** by creating these files in your project:
+### 3. Enable Evaluation
 
-**Agent Config** (`agent_config.yaml`):
-```yaml
-project_id: "GCP_PROJECT_ID"
-agent_name: "my-agent"
-  model: "gemini-2.5-flash"
+```python
+from agent_evaluation_sdk import enable_evaluation
+
+agent = YourAgent(...)
+wrapper = enable_evaluation(agent, "your-gcp-project-id", "agent-name", "eval_config.yaml")
 ```
 
-**SDK Config** (`eval_config.yaml`):
+That's it! Your agent now has full observability.
+
+## What You Get
+
+### Automatic Monitoring
+- ✅ **Cloud Logging** - Every interaction logged with interaction_id, input, output, duration
+- ✅ **Cloud Trace** - Nested spans show LLM calls, processing time, tool usage
+- ✅ **Cloud Monitoring** - Pre-built dashboard with latency, errors, token usage
+- ✅ **Dataset Collection** - Optional auto-capture to BigQuery for testing
+
+### Quality Testing
+- 🧪 **Regression Testing** - Test against historical dataset
+- 📊 **Automated Metrics** - BLEU, ROUGE scores
+- 🎯 **Model-Based Criteria** - Coherence, fluency, safety, groundedness
+- 📈 **Performance Tracking** - Compare test runs over time
+
+## Repository Structure
+
+```
+├── sdk/                    # Python SDK (pip install -e ./sdk)
+├── assistant/              # Interactive setup assistant
+├── terraform/              # GCP infrastructure (BigQuery, Logging, Monitoring)
+├── example_agents/         # Working examples (custom + ADK agents)
+├── README.md              # This file - Overview & quick start
+├── SETUP.md               # Detailed setup & deployment guide
+└── CONTRIBUTING.md        # Development guidelines
+```
+
+## Documentation
+
+Each file has a specific focus:
+
+- **[SETUP.md](./SETUP.md)** - Complete setup guide (GCP, Terraform, configuration, troubleshooting)
+- **[assistant/README.md](./assistant/README.md)** - Setup assistant usage and architecture
+- **[example_agents/README.md](./example_agents/README.md)** - Running example agents
+- **[sdk/README.md](./sdk/README.md)** - SDK API reference
+- **[CONTRIBUTING.md](./CONTRIBUTING.md)** - Development workflow
+
+## Manual Setup (Alternative)
+
+If you prefer not to use the assistant:
+
+**1. Create config files in your agent project:**
+
+`agent_config.yaml`:
+```yaml
+project_id: "your-gcp-project-id"
+agent_name: "my-agent"
+model: "gemini-2.5-flash"
+```
+
+`eval_config.yaml`:
 ```yaml
 logging:
   enabled: true
 tracing:
   enabled: true
 dataset:
-  auto_collect: false  # Set to true to collect data, then back to false
+  auto_collect: false  # Enable only when collecting test data
 ```
 
-### 3. Enable Evaluation (1 line!)
-```python
-from agent_evaluation_sdk import enable_evaluation
-
-agent = YourAgent(...)
-wrapper = enable_evaluation(agent, "PROJECT_ID", "agent-name", "eval_config.yaml")
+**2. Deploy infrastructure:**
+```bash
+cd terraform
+terraform init
+terraform apply
 ```
 
-## ✨ What You Get
+**3. Integrate SDK (see [SETUP.md](./SETUP.md#integrate-with-your-agent) for details)**
 
-### Real-time Monitoring (Automatic)
-After `enable_evaluation()`, every agent interaction automatically gets:
-
-✅ **Structured Logging** - Every interaction logged to Cloud Logging  
-✅ **Performance Tracing** - Nested spans show LLM call, processing, and logging time  
-✅ **Real-time Metrics** - Pre-built dashboard in Cloud Monitoring  
-✅ **Error Tracking** - Automatic error capture in traces and logs  
-✅ **Dataset Collection** - Optional auto-capture to BigQuery
-
-### Quality Testing (Manual)
-Run `python run_evaluation.py` to test your agent:
-
-🧪 **Regression Testing** - Test against historical dataset  
-📊 **Quality Metrics** - BLEU, ROUGE, coherence, fluency, safety  
-📈 **Performance Tracking** - Compare test runs over time  
-
-## 🔧 Technical Stack
-
-- **Agent Framework**: Google ADK (Agent Development Kit)
-- **Deployment Target**: Agent Engine (ready for deployment)
-- **Infrastructure**: Terraform for GCP services
-- **Monitoring**: Cloud Logging, Trace, Monitoring
-- **Dataset Storage**: BigQuery for datasets
-- **Evaluation**: Vertex AI Gen AI Evaluation Service
-- **CI/CD**: GitHub Actions for validation
-
-## 🧪 Agent Testing & Evaluation
+## Evaluation Workflow
 
 ```bash
-# 1. Enable dataset collection in eval_config.yaml
-# 2. Run agent - interactions auto-collect to BigQuery
-python custom_agent.py --test
+# 1. Enable dataset collection
+# Set auto_collect: true in eval_config.yaml
 
-# 3. Review in BigQuery - update 'reference' field, set 'reviewed = TRUE'
-# 4. Run evaluation test
+# 2. Run agent to collect data
+python your_agent.py --test
+
+# 3. Review & update reference answers in BigQuery
+# Set reviewed=TRUE after verification
+
+# 4. Disable collection
+# Set auto_collect: false in eval_config.yaml
+
+# 5. Run evaluation
 python run_evaluation.py
 ```
 
-**Workflow:**
-1. **Collect** - Set `auto_collect: true`, run agent with `--test`, then set back to `false`
-2. **Review** - Update ground truth in BigQuery (`{agent_name}_eval_dataset` table)
-3. **Evaluate** - Run evaluation script (appends to `{agent_name}_eval_run` and `{agent_name}_eval_metrics` tables)
+## Technical Stack
 
-**Available Metrics:**
-- **Automated**: BLEU, ROUGE
-- **Model-based**: Coherence, Fluency, Safety, Groundedness, Fulfillment, Instruction Following, Verbosity
+- **Framework**: Google ADK (Agent Development Kit)
+- **Infrastructure**: Terraform + GCP (Logging, Trace, Monitoring, BigQuery, Vertex AI)
+- **Language**: Python 3.12+
+- **CI/CD**: GitHub Actions
 
-See [SETUP.md](./SETUP.md#agent-testing--evaluation) for details.
-
-
-## 📁 Repository Structure
-
-```
-├── README.md                    # This file
-├── SETUP.md                     # Complete setup and deployment guide
-├── CONTRIBUTING.md              # Contributing guidelines
-├── sdk/                         # Python SDK
-│   ├── agent_evaluation_sdk/    # Core SDK code
-│   └── tests/                   # Unit & integration tests
-├── assistant/                   # Setup Assistant (NEW!)
-│   └── agent/                   # ADK assistant agent (run locally)
-├── terraform/                   # Infrastructure as Code
-│   └── modules/                 # GCP services modules
-├── example_agents/              # Working examples
-│   ├── custom_agent.py          # Custom agent example
-│   ├── adk_agent.py             # ADK agent example
-│   ├── agent_config.yaml        # Agent-specific config
-│   └── eval_config.yaml         # SDK config
-└── .github/workflows/           # CI/CD pipelines
-```
-
-## 📚 Documentation
-
-- **[SETUP.md](./SETUP.md)** - Complete setup and deployment guide
-- **[CONTRIBUTING.md](./CONTRIBUTING.md)** - Development and contribution guidelines
-- **[assistant/](./assistant/)** - Setup Assistant documentation
-- **[example_agents/](./example_agents/)** - Working code samples
-
-## 🛠️ CLI Commands
-
-```bash
-# Interactive setup
-agent-eval-assistant setup
-
-# Validate existing setup
-agent-eval-assistant validate --project /path/to/project
-```
-
-## 📄 License
+## License
 
 MIT License
