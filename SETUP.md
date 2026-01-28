@@ -8,11 +8,12 @@ This guide provides comprehensive instructions for setting up your development e
 2. [GCP Setup](#gcp-setup)
 3. [Infrastructure Deployment](#infrastructure-deployment)
 4. [SDK Installation](#sdk-installation)
-5. [Running the Example](#running-the-example)
-6. [Verification](#verification)
-7. [Configuration](#configuration)
-8. [Agent Testing & Evaluation](#agent-testing--evaluation)
-9. [Troubleshooting](#troubleshooting)
+5. [Manual Setup (Alternative)](#manual-setup-alternative)
+6. [Running the Example](#running-the-example)
+7. [Verification](#verification)
+8. [Configuration](#configuration)
+9. [Agent Testing & Evaluation](#agent-testing--evaluation)
+10. [Troubleshooting](#troubleshooting)
 
 ## Prerequisites
 
@@ -190,6 +191,162 @@ python -c "from agent_evaluation_sdk import enable_evaluation; print('✅ SDK in
 ```bash
 pip install agent-evaluation-sdk
 ```
+
+## Manual Setup (Alternative)
+
+If you prefer not to use the interactive assistant, follow these steps to manually configure your project.
+
+### 1. Create Configuration Files
+
+In your agent project directory, create the following configuration files:
+
+**`agent_config.yaml`**:
+```yaml
+project_id: "your-gcp-project-id"
+location: "us-central1"
+agent_name: "my-agent"
+model: "gemini-2.5-flash"
+```
+
+**`eval_config.yaml`**:
+```yaml
+logging:
+  enabled: true
+  level: "INFO"
+  include_trajectories: true
+
+tracing:
+  enabled: true
+
+metrics:
+  enabled: true
+
+dataset:
+  auto_collect: false  # Enable only when collecting test data
+  buffer_size: 10
+  storage_location: null  # Auto-generated: project.agent_evaluation.{agent_name}_eval_dataset
+
+genai_eval:
+  metrics: ["bleu", "rouge"]
+  criteria: ["coherence", "fluency", "safety", "groundedness"]
+  thresholds:
+    bleu: 0.5
+    rouge: 0.5
+    coherence: 0.7
+    fluency: 0.7
+    safety: 0.9
+    groundedness: 0.7
+
+regression:
+  test_limit: null  # null = all tests, or specify a number
+  only_reviewed: true  # Only run tests with reviewed=TRUE
+  dataset_table: null  # Custom BigQuery table (null = use default)
+```
+
+### 2. Copy Terraform Configuration
+
+Copy the entire `terraform/` directory from this repository to your agent project:
+
+```bash
+# From the agent-evaluation-assistant directory
+cp -r terraform /path/to/your/agent-project/
+```
+
+### 3. Deploy Infrastructure
+
+```bash
+cd /path/to/your/agent-project/terraform
+
+# Initialize Terraform
+terraform init
+
+# Review the plan
+terraform plan -var="project_id=your-gcp-project-id"
+
+# Deploy infrastructure
+terraform apply -var="project_id=your-gcp-project-id"
+```
+
+The infrastructure includes:
+- BigQuery dataset and tables for dataset collection
+- Cloud Logging log sinks
+- Cloud Monitoring dashboards
+- IAM roles and permissions
+
+### 4. Integrate SDK with Your Agent
+
+Add the SDK to your agent code:
+
+```python
+from agent_evaluation_sdk import enable_evaluation
+
+# Your existing agent
+agent = YourAgent(...)
+
+# Enable evaluation - one line!
+wrapper = enable_evaluation(
+    agent=agent,
+    project_id="your-gcp-project-id",
+    agent_name="my-agent",
+    config_path="eval_config.yaml"  # Path to your eval_config.yaml
+)
+
+# Use your agent normally - evaluation happens automatically
+response = agent.generate_content("Hello!")
+
+# Optional: Flush pending data and shutdown gracefully
+wrapper.flush()
+wrapper.shutdown()
+```
+
+**For ADK agents with tool tracing**:
+```python
+from agent_evaluation_sdk import enable_evaluation
+
+# Create your ADK agent
+agent = Agent(name="my_agent", model="gemini-2.5-flash")
+
+# Enable evaluation
+wrapper = enable_evaluation(agent, project_id, agent_name, "eval_config.yaml")
+
+# Add tool tracing to your tools
+@wrapper.tool_trace("search")
+def search_tool(query: str) -> str:
+    return search_api(query)
+
+# Add tools to agent
+agent.tools = [search_tool]
+```
+
+### 5. Verify Setup
+
+Run a simple test to verify everything works:
+
+```python
+# test_evaluation.py
+from agent_evaluation_sdk import enable_evaluation
+
+# Create a simple test agent
+class TestAgent:
+    def generate_content(self, prompt):
+        return f"Echo: {prompt}"
+
+agent = TestAgent()
+wrapper = enable_evaluation(agent, "your-project-id", "test-agent", "eval_config.yaml")
+
+# Test
+response = agent.generate_content("Hello!")
+print(response)
+
+# Cleanup
+wrapper.flush()
+wrapper.shutdown()
+```
+
+Check GCP Console to verify:
+- **Cloud Logging**: Search for `jsonPayload.agent_name="test-agent"`
+- **Cloud Trace**: Look for traces with name `agent.generate_content`
+- **Cloud Monitoring**: Check the auto-created dashboard
 
 ## Running the Example
 
@@ -515,6 +672,22 @@ Run the appropriate evaluation script to test your agent against the test datase
 | `{agent_name}_eval_run` | All test runs: `instruction`, `reference`, `response`, `test_run_name`, `test_timestamp` | Appends on each run |
 | `{agent_name}_eval_metrics` | All evaluation scores: `metrics`, `criteria_scores`, `test_run_name`, `test_timestamp` | Appends on each run |
 
+---
+
+## Cost Estimation
+
+Expected monthly costs for typical usage:
+
+| Service | 10K requests | 100K requests |
+|---------|--------------|---------------|
+| Cloud Logging | $1-2 | $10-20 |
+| Cloud Trace | $0-1 | $2-5 |
+| Cloud Monitoring | $0-1 | $1-3 |
+| BigQuery | $1-2 | $5-10 |
+| **Total** | **~$5-10** | **~$20-40** |
+
+
+---
 
 ## Troubleshooting
 
@@ -565,27 +738,3 @@ pip install -e ".[dev]"
 # Verify installation
 pip list | grep agent-evaluation
 ```
-
-## Cost Estimation
-
-Expected monthly costs for typical usage:
-
-| Service | 10K requests | 100K requests |
-|---------|--------------|---------------|
-| Cloud Logging | $1-2 | $10-20 |
-| Cloud Trace | $0-1 | $2-5 |
-| Cloud Monitoring | $0-1 | $1-3 |
-| BigQuery | $1-2 | $5-10 |
-| **Total** | **~$5-10** | **~$20-40** |
-
-## Additional Resources
-
-- 📖 [README](./README.md) - Project overview
-- 🔧 [CONTRIBUTING](./CONTRIBUTING.md) - Development guidelines
-- 📂 [Examples](./example_agents/) - Working code samples
-- 🐛 [GitHub Issues](https://github.com/AhmedYEita/agent-evaluation-assistant/issues)
-
----
-
-**Questions?** Check the [Troubleshooting](#troubleshooting) section or open an issue on GitHub.
-

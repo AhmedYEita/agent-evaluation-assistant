@@ -1,7 +1,99 @@
 """File reading and checking tools for the assistant agent"""
 
+import os
 from pathlib import Path
 from typing import Optional
+
+
+def list_directory_tool(directory_path: str, max_depth: int = 2) -> dict:
+    """
+    List contents of a directory to understand project structure
+    
+    Args:
+        directory_path: Path to directory to explore
+        max_depth: Maximum depth to recurse (default 2)
+    
+    Returns:
+        {
+            "success": bool,
+            "structure": list of str (file/folder paths),
+            "python_files": list of str (paths to .py files),
+            "config_files": list of str (paths to .yaml, .json, .toml, .txt),
+            "message": str
+        }
+    """
+    try:
+        path = Path(directory_path).expanduser()
+        if not path.exists():
+            return {
+                "success": False,
+                "structure": [],
+                "python_files": [],
+                "config_files": [],
+                "message": f"Directory not found: {directory_path}"
+            }
+        
+        if not path.is_dir():
+            return {
+                "success": False,
+                "structure": [],
+                "python_files": [],
+                "config_files": [],
+                "message": f"Path is not a directory: {directory_path}"
+            }
+        
+        structure = []
+        python_files = []
+        config_files = []
+        
+        # Walk directory up to max_depth
+        for root, dirs, files in os.walk(path):
+            # Calculate current depth
+            depth = str(root).count(os.sep) - str(path).count(os.sep)
+            if depth > max_depth:
+                dirs[:] = []  # Don't recurse deeper
+                continue
+            
+            # Filter out common ignore patterns
+            dirs[:] = [d for d in dirs if not d.startswith('.') and d not in ['__pycache__', 'node_modules', 'venv', '.venv', 'env']]
+            
+            rel_root = Path(root).relative_to(path)
+            indent = "  " * depth
+            
+            for dir_name in sorted(dirs):
+                structure.append(f"{indent}{dir_name}/")
+            
+            for file_name in sorted(files):
+                if file_name.startswith('.'):
+                    continue
+                    
+                structure.append(f"{indent}{file_name}")
+                file_path = Path(root) / file_name
+                rel_path = str(file_path.relative_to(path))
+                
+                if file_name.endswith('.py'):
+                    python_files.append(rel_path)
+                elif file_name.endswith(('.yaml', '.yml', '.json', '.toml', '.txt', '.md')):
+                    config_files.append(rel_path)
+        
+        message = f"Found {len(python_files)} Python files, {len(config_files)} config files"
+        
+        return {
+            "success": True,
+            "structure": structure[:100],  # Limit to first 100 entries
+            "python_files": python_files,
+            "config_files": config_files,
+            "message": message
+        }
+    
+    except Exception as e:
+        return {
+            "success": False,
+            "structure": [],
+            "python_files": [],
+            "config_files": [],
+            "message": f"Error: {e}"
+        }
 
 
 def read_file_tool(file_path: str) -> dict:
@@ -160,7 +252,7 @@ def check_terraform_exists_tool(agent_directory: str) -> dict:
             }
         
         # Check for common terraform folder names
-        for tf_dir in ["terraform", "infra", "tf"]:
+        for tf_dir in ["terraform", "tf", "infrastructure", "infra"]:
             tf_path = dir_path / tf_dir
             if tf_path.exists() and tf_path.is_dir():
                 return {

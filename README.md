@@ -40,6 +40,12 @@ pip install -e ./sdk
 
 ```bash
 cd assistant/agent
+pip install -r requirements.txt
+
+# Set your GCP project (required for the assistant)
+export GOOGLE_CLOUD_PROJECT="your-gcp-project-id"
+export GOOGLE_CLOUD_REGION="us-central1"
+
 python assistant_agent.py
 ```
 
@@ -92,42 +98,19 @@ That's it! Your agent now has full observability.
 Each file has a specific focus:
 
 - **[SETUP.md](./SETUP.md)** - Complete setup guide (GCP, Terraform, configuration, troubleshooting)
+- **[ROADMAP.md](./ROADMAP.md)** - Future enhancements (ADK plugin, A2A, PyPI distribution)
 - **[assistant/README.md](./assistant/README.md)** - Setup assistant usage and architecture
 - **[example_agents/README.md](./example_agents/README.md)** - Running example agents
 - **[sdk/README.md](./sdk/README.md)** - SDK API reference
 - **[CONTRIBUTING.md](./CONTRIBUTING.md)** - Development workflow
 
-## Manual Setup (Alternative)
+## Architecture Decisions
 
-If you prefer not to use the assistant:
+**Local Assistant:** Runs locally to automate file operations, validate code, and configure infrastructure (requires filesystem access).
 
-**1. Create config files in your agent project:**
+**Wrapper Approach:** The SDK provides an evaluation wrapper that intercepts agent calls to capture observability data while running in background threads for zero-latency performance. Works universally with ADK agents, custom agents, and can extend to other frameworks.
 
-`agent_config.yaml`:
-```yaml
-project_id: "your-gcp-project-id"
-agent_name: "my-agent"
-model: "gemini-2.5-flash"
-```
-
-`eval_config.yaml`:
-```yaml
-logging:
-  enabled: true
-tracing:
-  enabled: true
-dataset:
-  auto_collect: false  # Enable only when collecting test data
-```
-
-**2. Deploy infrastructure:**
-```bash
-cd terraform
-terraform init
-terraform apply
-```
-
-**3. Integrate SDK (see [SETUP.md](./SETUP.md#integrate-with-your-agent) for details)**
+**Manual Setup:** Prefer not to use the assistant? See [SETUP.md](./SETUP.md#manual-setup-alternative) for step-by-step manual configuration.
 
 ## Evaluation Workflow
 
@@ -154,7 +137,3 @@ python run_evaluation.py
 - **Infrastructure**: Terraform + GCP (Logging, Trace, Monitoring, BigQuery, Vertex AI)
 - **Language**: Python 3.12+
 - **CI/CD**: GitHub Actions
-
-## License
-
-MIT License

@@ -117,10 +117,13 @@ Modify the assistant by editing:
 A: Needs local file access to check your agent and copy configs.
 
 **Q: Can I skip the assistant?**  
-A: Yes, manually create configs and copy terraform (see main [README.md](../README.md)).
+A: Yes, manually create configs and copy terraform (see main [SETUP.md](../SETUP.md)).
 
 **Q: Use for multiple projects?**  
 A: Yes, run once per project. Generates separate configs for each.
+
+**Q: Will there be a deployed version?**  
+A: The assistant requires local file access for automation. For simpler setups, we're exploring GitHub integration and PyPI distribution. See [ROADMAP.md](../ROADMAP.md) for future plans.
 
 ---
 
