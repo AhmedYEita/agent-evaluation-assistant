@@ -40,6 +40,12 @@ pip install -e ./sdk
 
 ```bash
 cd assistant/agent
+pip install -r requirements.txt
+
+# Set your GCP project (required for the assistant)
+export GOOGLE_CLOUD_PROJECT="your-gcp-project-id"
+export GOOGLE_CLOUD_REGION="us-central1"
+
 python assistant_agent.py
 ```
 
