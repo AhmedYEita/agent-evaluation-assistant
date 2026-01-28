@@ -2,7 +2,23 @@
 
 This document outlines potential future enhancements for Agent Evaluation Assistant.
 
-### 1. PyPI Package Distribution
+## Future Enhancements
+
+### 1. ADK Native Plugin
+
+**Explored:** Native ADK plugin for automatic observability without wrapper
+
+**Why Not Implemented:**
+- Plugin callbacks don't provide access to actual tool execution timing
+- Wrapper approach provides accurate tool tracing via `@wrapper.tool_trace()` decorator
+- Wrapper works universally across all agent types (ADK, custom, future frameworks)
+
+**Future Consideration:**
+Could be reconsidered if ADK exposes tool execution timing in plugin callbacks. For now, the wrapper approach provides better accuracy and broader compatibility.
+
+---
+
+### 2. PyPI Package Distribution
 
 **Current:** Users clone repo and install with `pip install -e ./sdk`  
 **Future:** `pip install agent-evaluation-sdk`
@@ -16,7 +32,7 @@ This document outlines potential future enhancements for Agent Evaluation Assist
 
 ---
 
-### 2. A2A Protocol Support
+### 3. A2A Protocol Support
 
 **What:** Expose evaluation as an Agent-to-Agent (A2A) service
 
@@ -47,7 +63,7 @@ Multiple Agents → (A2A) → Centralized Evaluation Service
 
 ---
 
-### 3. Assistant Enhancements
+### 4. Assistant Enhancements
 
 #### Option A: GitHub Integration
 **What:** Assistant creates PRs in user's repository
@@ -74,16 +90,16 @@ Assistant: [authenticates, creates branch, adds files, opens PR]
 
 ---
 
-### 4. Framework Expansion
+### 5. Framework Expansion
 
-**Current:** ADK (plugin) + Custom agents (wrapper)
+**Current:** ADK agents + Custom agents (via wrapper)
 
 **Future Support:**
-- LangChain agents (wrapper)
-- CrewAI agents (wrapper)
-- Any framework with agent pattern (wrapper)
+- LangChain agents (wrapper extension)
+- CrewAI agents (wrapper extension)
+- Any framework with agent pattern (wrapper extension)
 
-**Strategy:** Universal wrapper + framework-specific optimizations
+**Strategy:** Universal wrapper pattern with framework-specific optimizations where needed
 
 ---
 
@@ -91,7 +107,7 @@ Assistant: [authenticates, creates branch, adds files, opens PR]
 
 **Local-First:** Assistant runs locally for automated file operations, code validation, and privacy.
 
-**Dual Integration:** Plugin for ADK (native), wrapper for everything else (custom agents, LangChain, CrewAI).
+**Wrapper Integration:** Universal wrapper works with ADK and custom agents. Can extend to other frameworks (LangChain, CrewAI, etc.) when needed.
 
 **A2A for Scale:** Current architecture optimized for individual developers. A2A makes sense for enterprise/multi-team scenarios with centralized services.
 

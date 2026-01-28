@@ -108,39 +108,9 @@ Each file has a specific focus:
 
 **Local Assistant:** Runs locally to automate file operations, validate code, and configure infrastructure (requires filesystem access).
 
-**Dual Integration:** ADK plugin provides native integration; wrapper supports custom agents and other frameworks (LangChain, CrewAI, etc.).
+**Wrapper Approach:** The SDK provides an evaluation wrapper that intercepts agent calls to capture observability data while running in background threads for zero-latency performance. Works universally with ADK agents, custom agents, and can extend to other frameworks.
 
-## Manual Setup (Alternative)
-
-If you prefer not to use the assistant:
-
-**1. Create config files in your agent project:**
-
-`agent_config.yaml`:
-```yaml
-project_id: "your-gcp-project-id"
-agent_name: "my-agent"
-model: "gemini-2.5-flash"
-```
-
-`eval_config.yaml`:
-```yaml
-logging:
-  enabled: true
-tracing:
-  enabled: true
-dataset:
-  auto_collect: false  # Enable only when collecting test data
-```
-
-**2. Deploy infrastructure:**
-```bash
-cd terraform
-terraform init
-terraform apply
-```
-
-**3. Integrate SDK (see [SETUP.md](./SETUP.md#integrate-with-your-agent) for details)**
+**Manual Setup:** Prefer not to use the assistant? See [SETUP.md](./SETUP.md#manual-setup-alternative) for step-by-step manual configuration.
 
 ## Evaluation Workflow
 
@@ -167,7 +137,3 @@ python run_evaluation.py
 - **Infrastructure**: Terraform + GCP (Logging, Trace, Monitoring, BigQuery, Vertex AI)
 - **Language**: Python 3.12+
 - **CI/CD**: GitHub Actions
-
-## License
-
-MIT License

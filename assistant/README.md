@@ -117,7 +117,7 @@ Modify the assistant by editing:
 A: Needs local file access to check your agent and copy configs.
 
 **Q: Can I skip the assistant?**  
-A: Yes, manually create configs and copy terraform (see main [README.md](../README.md)).
+A: Yes, manually create configs and copy terraform (see main [SETUP.md](../SETUP.md)).
 
 **Q: Use for multiple projects?**  
 A: Yes, run once per project. Generates separate configs for each.
