@@ -81,6 +81,7 @@ CUSTOMIZE THIS SCRIPT:
 """
 
 import sys
+import uuid
 import yaml
 import asyncio
 from datetime import datetime, timezone
@@ -166,7 +167,7 @@ async def main():
     # Run agent on test cases
     print("🤖 Running agent on test cases...")
     
-    test_run_id = f"test_{{test_run_timestamp}}"
+    test_run_name = f"test_{{test_run_timestamp}}"
     test_timestamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     
     results = []
@@ -211,7 +212,7 @@ async def main():
                 response_text = "[EMPTY RESPONSE]"
             
             results.append({{
-                "test_run_id": test_run_id,
+                "test_run_id": str(uuid.uuid4()),  # Unique ID for this test case
                 "test_timestamp": test_timestamp,
                 "instruction": instruction,
                 "reference": reference,
@@ -222,7 +223,7 @@ async def main():
         except Exception as e:
             print(f"   ❌ Error: {{e}}")
             results.append({{
-                "test_run_id": test_run_id,
+                "test_run_id": str(uuid.uuid4()),  # Unique ID for this test case
                 "test_timestamp": test_timestamp,
                 "instruction": instruction,
                 "reference": reference,
@@ -234,7 +235,7 @@ async def main():
     print(f"✅ Completed {{len(results)}} test runs")
     
     # Save using RegressionTester methods (uses new table naming)
-    response_table, metrics_table = tester.save_results(results, test_run_id)
+    response_table, metrics_table = tester.save_results(results, test_run_name)
     
     # Evaluate
     print("📈 Evaluating responses...")
@@ -247,7 +248,7 @@ async def main():
     )
     
     # Save metrics
-    tester.save_metrics(test_run_id, eval_results, metrics_table)
+    tester.save_metrics(test_run_name, eval_results, metrics_table)
     
     # Cleanup
     wrapper.flush()
