@@ -98,10 +98,17 @@ That's it! Your agent now has full observability.
 Each file has a specific focus:
 
 - **[SETUP.md](./SETUP.md)** - Complete setup guide (GCP, Terraform, configuration, troubleshooting)
+- **[ROADMAP.md](./ROADMAP.md)** - Future enhancements (ADK plugin, A2A, PyPI distribution)
 - **[assistant/README.md](./assistant/README.md)** - Setup assistant usage and architecture
 - **[example_agents/README.md](./example_agents/README.md)** - Running example agents
 - **[sdk/README.md](./sdk/README.md)** - SDK API reference
 - **[CONTRIBUTING.md](./CONTRIBUTING.md)** - Development workflow
+
+## Architecture Decisions
+
+**Local Assistant:** Runs locally to automate file operations, validate code, and configure infrastructure (requires filesystem access).
+
+**Dual Integration:** ADK plugin provides native integration; wrapper supports custom agents and other frameworks (LangChain, CrewAI, etc.).
 
 ## Manual Setup (Alternative)
 

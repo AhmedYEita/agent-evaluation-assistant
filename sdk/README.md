@@ -90,8 +90,10 @@ Tool spans appear in Cloud Trace as `tool.{name}`.
 
 ## Supported Agents
 
-- **Custom agents**: Must have `generate_content(prompt)` method
-- **ADK agents**: Wrap the `InMemoryRunner` instance (has `run_async()`)
+- **ADK agents**: Use the `EvaluationPlugin` for native integration
+- **Custom agents**: Use the wrapper (must have `generate_content(prompt)` method)
+
+**Note:** Both approaches are maintained - plugin for ADK, wrapper for custom agents and other frameworks (LangChain, CrewAI, etc.).
 
 ## Documentation
 

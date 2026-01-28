@@ -122,6 +122,9 @@ A: Yes, manually create configs and copy terraform (see main [README.md](../READ
 **Q: Use for multiple projects?**  
 A: Yes, run once per project. Generates separate configs for each.
 
+**Q: Will there be a deployed version?**  
+A: The assistant requires local file access for automation. For simpler setups, we're exploring GitHub integration and PyPI distribution. See [ROADMAP.md](../ROADMAP.md) for future plans.
+
 ---
 
 See [main README](../README.md) for complete documentation.

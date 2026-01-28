@@ -515,6 +515,22 @@ Run the appropriate evaluation script to test your agent against the test datase
 | `{agent_name}_eval_run` | All test runs: `instruction`, `reference`, `response`, `test_run_name`, `test_timestamp` | Appends on each run |
 | `{agent_name}_eval_metrics` | All evaluation scores: `metrics`, `criteria_scores`, `test_run_name`, `test_timestamp` | Appends on each run |
 
+---
+
+## Cost Estimation
+
+Expected monthly costs for typical usage:
+
+| Service | 10K requests | 100K requests |
+|---------|--------------|---------------|
+| Cloud Logging | $1-2 | $10-20 |
+| Cloud Trace | $0-1 | $2-5 |
+| Cloud Monitoring | $0-1 | $1-3 |
+| BigQuery | $1-2 | $5-10 |
+| **Total** | **~$5-10** | **~$20-40** |
+
+
+---
 
 ## Troubleshooting
 
@@ -565,27 +581,3 @@ pip install -e ".[dev]"
 # Verify installation
 pip list | grep agent-evaluation
 ```
-
-## Cost Estimation
-
-Expected monthly costs for typical usage:
-
-| Service | 10K requests | 100K requests |
-|---------|--------------|---------------|
-| Cloud Logging | $1-2 | $10-20 |
-| Cloud Trace | $0-1 | $2-5 |
-| Cloud Monitoring | $0-1 | $1-3 |
-| BigQuery | $1-2 | $5-10 |
-| **Total** | **~$5-10** | **~$20-40** |
-
-## Additional Resources
-
-- 📖 [README](./README.md) - Project overview
-- 🔧 [CONTRIBUTING](./CONTRIBUTING.md) - Development guidelines
-- 📂 [Examples](./example_agents/) - Working code samples
-- 🐛 [GitHub Issues](https://github.com/AhmedYEita/agent-evaluation-assistant/issues)
-
----
-
-**Questions?** Check the [Troubleshooting](#troubleshooting) section or open an issue on GitHub.
-
