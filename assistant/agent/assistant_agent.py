@@ -14,6 +14,7 @@ from google.genai import types
 
 # Import tools
 from tools import (
+    list_directory_tool,
     read_file_tool,
     check_agent_compatibility_tool,
     check_eval_config_exists_tool,
@@ -52,6 +53,7 @@ def create_assistant():
     os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "1"
     
     tools = [
+        list_directory_tool,
         check_eval_config_exists_tool,
         check_terraform_exists_tool,
         check_agent_compatibility_tool,
@@ -85,9 +87,11 @@ async def run():
     print("🤖 Agent Evaluation Setup Assistant")
     print("="*60)
     print("\nType 'exit', 'quit', or 'q' to end.\n")
-    print("Assistant: Hi! I help integrate the Agent Evaluation SDK into your agents.")
-    print("          This includes configuration, code integration, and infrastructure setup.")
-    print("          Ready to start?\n")
+    print("Assistant: Hi! I help with Agent Evaluation SDK setup and questions.")
+    print("          What would you like help with?")
+    print("          1. Full setup (SDK + infrastructure)")
+    print("          2. Evaluation script only")
+    print("          3. Questions or troubleshooting\n")
     
     while True:
         try:
