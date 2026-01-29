@@ -51,6 +51,7 @@ class EvaluationWrapper:
         self._executor = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="eval_bg_")
         self._shutdown_called = False
         self._original_methods: Dict[str, Callable] = {}
+        self._tool_traces = threading.local()  # Track tool calls for trajectories per thread
         atexit.register(self._shutdown)
         self._wrap_agent()
 
@@ -408,10 +409,10 @@ class EvaluationWrapper:
         except Exception as e:
             print(f"Warning: Failed to send metrics: {e}")
 
-    def _send_dataset(self, interaction_id, input_data, output_data, metadata):
+    def _send_dataset(self, interaction_id, input_data, output_data, metadata, trajectory=None):
         try:
             self.dataset_collector.add_interaction(
-                interaction_id, input_data, output_data, metadata
+                interaction_id, input_data, output_data, metadata, trajectory
             )
         except Exception as e:
             print(f"Warning: Failed to add dataset entry: {e}")

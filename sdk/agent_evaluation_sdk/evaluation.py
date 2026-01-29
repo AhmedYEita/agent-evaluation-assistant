@@ -53,6 +53,7 @@ class GenAIEvaluator:
                 "dataset_size": 0,
                 "metrics": {},
                 "criteria_scores": {},
+                "trajectory_stats": {},
                 "error": "Empty dataset",
             }
 
@@ -79,6 +80,7 @@ class GenAIEvaluator:
             "dataset_size": len(dataset),
             "metrics": {},
             "criteria_scores": {},
+            "trajectory_stats": {},
         }
 
         # Calculate automated metrics
@@ -91,6 +93,9 @@ class GenAIEvaluator:
         # Run model-based criteria evaluation
         if criteria:
             results["criteria_scores"] = self._evaluate_criteria(dataset, criteria, thresholds)
+
+        # Analyze trajectory data if available
+        results["trajectory_stats"] = self._analyze_trajectories(dataset)
 
         return results
 
