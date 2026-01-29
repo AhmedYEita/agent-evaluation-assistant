@@ -71,7 +71,7 @@ class RegressionTester:
 
         # Use parameterized query to prevent SQL injection
         query = """
-            SELECT instruction, reference, context
+            SELECT instruction, reference, context, trajectory
             FROM `{table_name}`
             {where_clause}
             ORDER BY timestamp DESC
@@ -236,6 +236,7 @@ class RegressionTester:
             "dataset_size": eval_results.get("dataset_size", 0),
             "metrics": json.dumps(eval_results.get("metrics", {})),
             "criteria_scores": json.dumps(eval_results.get("criteria_scores", {})),
+            "trajectory_stats": json.dumps(eval_results.get("trajectory_stats", {})),
         }
 
         schema = [
@@ -245,6 +246,7 @@ class RegressionTester:
             bigquery.SchemaField("dataset_size", "INTEGER", mode="NULLABLE"),
             bigquery.SchemaField("metrics", "STRING", mode="NULLABLE"),
             bigquery.SchemaField("criteria_scores", "STRING", mode="NULLABLE"),
+            bigquery.SchemaField("trajectory_stats", "STRING", mode="NULLABLE"),
         ]
 
         # Create table if it doesn't exist
@@ -384,6 +386,17 @@ class RegressionTester:
                 if "pass_rate" in scores:
                     score_info += f", pass_rate={scores['pass_rate']}"
                 print(f"  {criterion}: {score_info}")
+
+        if "trajectory_stats" in eval_results and eval_results["trajectory_stats"].get("available"):
+            traj = eval_results["trajectory_stats"]
+            print("\nTrajectory Analysis:")
+            print(f"  Interactions with tools: {traj.get('interactions_with_tools', 0)}")
+            print(f"  Total tool calls: {traj.get('total_tool_calls', 0)}")
+            print(f"  Avg tools per interaction: {traj.get('avg_tools_per_interaction', 0)}")
+            if traj.get('tool_usage_counts'):
+                print(f"  Tool usage: {traj['tool_usage_counts']}")
+            if traj.get('interactions_with_errors', 0) > 0:
+                print(f"  ⚠️  Errors: {traj['interactions_with_errors']}")
 
         print("\n💡 Query your results:")
         print(f"   SELECT * FROM `{response_table}` WHERE test_run_name = '{test_run_name}'")
