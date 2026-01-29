@@ -154,44 +154,72 @@ def check_agent_compatibility_tool(agent_file_path: str) -> dict:
     try:
         # Track all files we've checked
         files_checked = [str(agent_path)]
+        all_contents = {}
         
         # Read main agent file
         content = agent_path.read_text()
+        all_contents[str(agent_path)] = content
         
-        # Extract and read local imports
-        import_contents = {}
-        local_imports = _extract_local_imports(content)
+        # Extract and read local imports RECURSIVELY
         agent_dir = agent_path.parent
+        visited_imports = set()
+        imports_to_check = _extract_local_imports(content)
         
-        for import_info in local_imports:
+        while imports_to_check:
+            import_info = imports_to_check.pop(0)
+            if import_info in visited_imports:
+                continue
+            visited_imports.add(import_info)
+            
             import_path = _resolve_import_path(import_info, agent_dir)
             if import_path and import_path.exists():
                 try:
-                    import_contents[str(import_path)] = import_path.read_text()
+                    import_content = import_path.read_text()
+                    all_contents[str(import_path)] = import_content
                     files_checked.append(str(import_path))
+                    
+                    # Recursively extract imports from this file
+                    nested_imports = _extract_local_imports(import_content)
+                    for nested in nested_imports:
+                        if nested not in visited_imports:
+                            imports_to_check.append(nested)
                 except Exception:
                     pass  # Skip files we can't read
         
         # Combine all content for checking
-        all_content = content + "\n".join(import_contents.values())
+        all_content = "\n".join(all_contents.values())
         
-        # Check for ADK agent patterns (in main file or imports)
-        has_adk_imports = 'from google.adk import' in all_content or 'import google.adk' in all_content
-        has_runner = 'InMemoryRunner' in all_content or 'runner.run_async' in all_content
+        # Check for ADK agent patterns (FLEXIBLE matching)
+        has_adk_imports = (
+            'from google.adk import' in all_content or 
+            'import google.adk' in all_content or
+            'from google.adk.' in all_content
+        )
+        has_agent_class = 'Agent(' in all_content or 'Agent =' in all_content
+        has_runner = (
+            'InMemoryRunner' in all_content or 
+            '.run_async(' in all_content or
+            'runner.run_async' in all_content or
+            'runner = ' in all_content
+        )
         
-        # Check for custom agent patterns (in main file or imports)
-        has_generate = 'def generate_content' in all_content
+        # Check for custom agent patterns (FLEXIBLE matching)
+        has_generate = (
+            'def generate_content' in all_content or
+            'async def generate_content' in all_content
+        )
         
-        files_msg = f" (checked {len(files_checked)} file(s))" if len(files_checked) > 1 else ""
+        files_msg = f" (checked {len(files_checked)} file(s): {', '.join([Path(f).name for f in files_checked[:5]])}{'...' if len(files_checked) > 5 else ''})"
         
-        if has_adk_imports and has_runner:
+        # More lenient ADK detection
+        if has_adk_imports and (has_runner or has_agent_class):
             return {
                 "compatible": True,
                 "agent_type": "adk",
                 "has_generate_content": False,
                 "has_runner": True,
                 "files_checked": files_checked,
-                "message": f"✓ Agent is compatible! Detected ADK agent with InMemoryRunner{files_msg}"
+                "message": f"✓ Agent is compatible! Detected ADK agent{files_msg}"
             }
         elif has_generate:
             return {
@@ -209,7 +237,7 @@ def check_agent_compatibility_tool(agent_file_path: str) -> dict:
                 "has_generate_content": False,
                 "has_runner": False,
                 "files_checked": files_checked,
-                "message": f"Agent needs either:\n- ADK setup (Agent + InMemoryRunner + runner.run_async), OR\n- Custom agent with generate_content(prompt: str) method\n\nChecked: {', '.join([Path(f).name for f in files_checked])}"
+                "message": f"Agent needs either:\n- ADK setup (Agent + InMemoryRunner + runner.run_async), OR\n- Custom agent with generate_content(prompt: str) method\n\nChecked {len(files_checked)} file(s): {', '.join([Path(f).name for f in files_checked[:5]])}{'...' if len(files_checked) > 5 else ''}"
             }
     
     except Exception as e:
