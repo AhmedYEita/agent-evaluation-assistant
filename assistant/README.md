@@ -2,25 +2,115 @@
 
 Interactive ADK-based agent that guides you through setting up agent evaluation infrastructure.
 
+## How the Assistant Works
+
+The assistant operates in **3 modes** and intelligently adapts to your project structure:
+
+```mermaid
+flowchart TD
+    Start([User Runs Assistant]) --> ModeSelect{Select Mode}
+    
+    ModeSelect -->|1. Full Setup| GetPaths[Get Paths:<br/>• AEA repo path<br/>• Agent project path]
+    ModeSelect -->|2. Evaluation Script Only| GetAgentPath2[Get Agent Project Path]
+    ModeSelect -->|3. Inquiries| Inquire[Answer Questions<br/>& Troubleshoot]
+    
+    GetPaths --> Explore1[Explore Project:<br/>• List directories<br/>• Find Python files<br/>• Scan imports]
+    Explore1 --> CheckCompat[Check Compatibility:<br/>Scan all .py files<br/>for ADK/Custom patterns]
+    
+    CheckCompat -->|Compatible| AskSDK{Enable SDK<br/>Integration?}
+    CheckCompat -->|Not Compatible| ShowReq[Show Requirements:<br/>• ADK: Agent + Runner<br/>• Custom: generate_content]
+    ShowReq --> Exit1([Exit - Fix Agent])
+    
+    AskSDK -->|Yes| CopySDK[Copy SDK to<br/>Agent Project]
+    AskSDK -->|No| SkipSDK[Skip SDK Integration]
+    
+    CopySDK --> AskEval{Enable<br/>Evaluation?}
+    SkipSDK --> AskEval
+    
+    AskEval -->|Yes| CreateConfig[Create eval_config.yaml<br/>with all sections]
+    AskEval -->|No| CreateMinConfig[Create eval_config.yaml<br/>without genai_eval/regression]
+    
+    CreateConfig --> ShowIntegration[Show Integration Code:<br/>• Import wrapper<br/>• Wrap agent<br/>• Multi-file guidance]
+    CreateMinConfig --> ShowIntegration
+    
+    ShowIntegration --> AskInfra{Setup<br/>Infrastructure?}
+    
+    AskInfra -->|Yes| CopyTerraform[Copy Terraform<br/>to Agent Project]
+    AskInfra -->|No| SkipInfra[Skip Infrastructure]
+    
+    CopyTerraform --> ShowTfCmd[Show Commands:<br/>• terraform init<br/>• terraform plan<br/>• terraform apply]
+    SkipInfra --> ShowTfCmd
+    
+    ShowTfCmd --> AskEvalScript{Generate<br/>Evaluation Script?}
+    
+    AskEvalScript -->|Yes| GenScript[Generate run_evaluation.py:<br/>• ADK or Custom template<br/>• Project-specific config]
+    AskEvalScript -->|No| Complete1
+    
+    GenScript --> Complete1([✅ Setup Complete!])
+    
+    GetAgentPath2 --> Explore2[Explore & Check<br/>Compatibility]
+    Explore2 --> CheckSDK{SDK Already<br/>Integrated?}
+    
+    CheckSDK -->|No| ShowSDKSteps[Show SDK Integration<br/>Instructions]
+    CheckSDK -->|Yes| CheckConfig{eval_config.yaml<br/>exists?}
+    
+    ShowSDKSteps --> CheckConfig
+    
+    CheckConfig -->|No| CreateConfig2[Create eval_config.yaml]
+    CheckConfig -->|Yes| UpdateConfig[Update config:<br/>Add genai_eval + regression]
+    
+    CreateConfig2 --> GenScript2[Generate Evaluation Script]
+    UpdateConfig --> GenScript2
+    GenScript2 --> Complete2([✅ Script Ready!])
+    
+    Inquire --> QType{Question Type}
+    QType -->|Config| ExplainConfig[Explain Configuration<br/>Options & Best Practices]
+    QType -->|Integration| ShowIntegrationHelp[Show Integration<br/>Patterns & Examples]
+    QType -->|Infrastructure| CheckInfra[Check Terraform<br/>Status & Resources]
+    QType -->|Troubleshooting| Debug[Investigate Issues:<br/>• Read logs<br/>• Check setup<br/>• Suggest fixes]
+    
+    ExplainConfig --> Complete3([Answer Provided])
+    ShowIntegrationHelp --> Complete3
+    CheckInfra --> Complete3
+    Debug --> Complete3
+    
+    style Start fill:#e1f5ff
+    style Complete1 fill:#c8e6c9
+    style Complete2 fill:#c8e6c9
+    style Complete3 fill:#c8e6c9
+    style Exit1 fill:#ffcdd2
+    style ModeSelect fill:#fff9c4
+    style AskSDK fill:#fff9c4
+    style AskEval fill:#fff9c4
+    style AskInfra fill:#fff9c4
+    style AskEvalScript fill:#fff9c4
+```
+
+**Key Capabilities:**
+- 🔍 **Intelligent Discovery** - Automatically scans projects to detect agent patterns across multiple files
+- 🛠️ **Adaptive Guidance** - Provides context-aware integration instructions based on your code structure
+- 🎯 **Three Operating Modes** - Full setup, evaluation-only, or troubleshooting support
+- ✅ **Validation First** - Checks compatibility and existing configuration before making changes
+- 📝 **Code Generation** - Creates tailored evaluation scripts for ADK and custom agents
+
 ## Quick Start
 
-### Step 1: Clone SDK Repository (Separate from Your Agent)
+### Step 1: Clone SDK Repository
 
-Clone this repo **outside** your agent project directory:
+Clone anywhere - works **inside or outside** your agent project:
 
 ```bash
-# Clone in a separate location (e.g., ~/repos, ~/projects)
+# Option A: Clone inside your agent project
+cd /path/to/your-agent-project
+git clone https://github.com/AhmedYEita/agent-evaluation-assistant
+cd agent-evaluation-assistant
+pip install -e ./sdk
+
+# Option B: Clone separately  
 cd ~/repos
 git clone https://github.com/AhmedYEita/agent-evaluation-assistant
 cd agent-evaluation-assistant
 pip install -e ./sdk
-```
-
-**Important:** Keep the SDK repo **separate** from your agent project:
-```
-~/repos/
-├── agent-evaluation-assistant/     # ← SDK repo (clone here)
-└── my-agent-project/           # ← Your agent (existing project)
 ```
 
 ### Step 2: Run the Assistant

@@ -90,9 +90,9 @@ bq query --use_legacy_sql=false \
 3. **Evaluate**: Run `python run_evaluation_*.py`
 
 **BigQuery Tables:**
-- `{agent_name}_eval_dataset` - Test cases
+- `{agent_name}_eval_dataset` - Test cases with trajectory data
 - `{agent_name}_eval_run` - Test responses (appends)
-- `{agent_name}_eval_metrics` - Evaluation scores (appends)
+- `{agent_name}_eval_metrics` - Evaluation scores including trajectory analysis (appends)
 
 ## Config Files Explained
 
