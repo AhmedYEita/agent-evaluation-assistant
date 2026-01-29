@@ -161,30 +161,34 @@ def check_agent_compatibility_tool(agent_file_path: str) -> dict:
         all_contents[str(agent_path)] = content
         
         # Extract and read local imports RECURSIVELY
-        agent_dir = agent_path.parent
         visited_imports = set()
-        imports_to_check = _extract_local_imports(content)
+        files_to_process = [(agent_path, content)]  # (file_path, content) tuples
         
-        while imports_to_check:
-            import_info = imports_to_check.pop(0)
-            if import_info in visited_imports:
-                continue
-            visited_imports.add(import_info)
+        while files_to_process:
+            current_file, current_content = files_to_process.pop(0)
+            current_dir = current_file.parent
             
-            import_path = _resolve_import_path(import_info, agent_dir)
-            if import_path and import_path.exists():
-                try:
-                    import_content = import_path.read_text()
-                    all_contents[str(import_path)] = import_content
-                    files_checked.append(str(import_path))
-                    
-                    # Recursively extract imports from this file
-                    nested_imports = _extract_local_imports(import_content)
-                    for nested in nested_imports:
-                        if nested not in visited_imports:
-                            imports_to_check.append(nested)
-                except Exception:
-                    pass  # Skip files we can't read
+            # Extract imports from current file
+            local_imports = _extract_local_imports(current_content)
+            
+            for import_info in local_imports:
+                import_key = f"{current_dir}::{import_info}"  # Make key unique per directory context
+                if import_key in visited_imports:
+                    continue
+                visited_imports.add(import_key)
+                
+                # Resolve relative to the current file's directory
+                import_path = _resolve_import_path(import_info, current_dir)
+                if import_path and import_path.exists() and str(import_path) not in all_contents:
+                    try:
+                        import_content = import_path.read_text()
+                        all_contents[str(import_path)] = import_content
+                        files_checked.append(str(import_path))
+                        
+                        # Add this file to be processed for its imports
+                        files_to_process.append((import_path, import_content))
+                    except Exception:
+                        pass  # Skip files we can't read
         
         # Combine all content for checking
         all_content = "\n".join(all_contents.values())

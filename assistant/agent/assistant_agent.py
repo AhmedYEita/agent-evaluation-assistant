@@ -32,7 +32,7 @@ from tools import (
 
 def _load_system_instruction() -> str:
     """Load system instruction from prompt file."""
-    prompt_file = Path(__file__).parent / "system_instruction.prompt"
+    prompt_file = Path(__file__).parent / "system_instruction_concise.prompt"
     return prompt_file.read_text()
 
 
