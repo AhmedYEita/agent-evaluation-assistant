@@ -267,15 +267,53 @@ class GenAIEvaluator:
         # Prepare evaluation dataset as DataFrame
         import pandas as pd
 
-        eval_data = [
-            {
+        eval_data = []
+        for item in dataset:
+            # Build enhanced context with trajectory info
+            context = item.get("context", "")
+            trajectory = item.get("trajectory")
+
+            # If trajectory exists, add it to context for model-based evaluation
+            if trajectory:
+                import json
+                try:
+                    # Parse trajectory if it's a string
+                    if isinstance(trajectory, str):
+                        trajectory = json.loads(trajectory)
+
+                    # Format trajectory as readable text for the evaluator
+                    if isinstance(trajectory, list) and len(trajectory) > 0:
+                        tool_summary = []
+                        for step in trajectory:
+                            if isinstance(step, dict) and step.get("tool_name"):
+                                tool_name = step["tool_name"]
+                                duration = step.get("duration_ms", "?")
+                                error = step.get("error")
+                                status = " (FAILED)" if error else ""
+                                tool_summary.append(
+                                    f"- {tool_name} ({duration}ms){status}"
+                                )
+
+                        if tool_summary:
+                            trajectory_text = (
+                                "Tool calls:\n" + "\n".join(tool_summary)
+                            )
+                            # Append trajectory to context
+                            context = (
+                                f"{context}\n\n{trajectory_text}"
+                                if context
+                                else trajectory_text
+                            )
+                except (json.JSONDecodeError, TypeError):
+                    pass  # Skip if trajectory can't be parsed
+
+            eval_data.append({
                 "prompt": item.get("instruction", ""),
-                "context": item.get("context", ""),
+                "context": context,  # Now includes trajectory info
                 "reference": item.get("reference", ""),
                 "response": item.get("response", ""),
-            }
-            for item in dataset
-        ]
+            })
+
         eval_dataset = pd.DataFrame(eval_data)
 
         valid_criteria = {
@@ -416,3 +454,108 @@ class GenAIEvaluator:
         raw_score = self._extract_raw_score(result, criterion)
         normalized_score = raw_score / 5.0 if raw_score > 1.0 else raw_score
         return 1.0 if normalized_score >= threshold else 0.0
+
+    def _analyze_trajectories(
+        self, dataset: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """Analyze trajectory data from dataset.
+
+        Args:
+            dataset: List of test cases, may contain trajectory field
+
+        Returns:
+            Dictionary with trajectory statistics
+        """
+        import json
+
+        trajectories_found = 0
+        total_tool_calls = 0
+        tool_counts: Dict[str, int] = {}
+        tool_durations: Dict[str, List[float]] = {}
+        interactions_with_tools = 0
+        interactions_with_errors = 0
+
+        for item in dataset:
+            # Try to parse trajectory (might be JSON string or already parsed)
+            trajectory = item.get("trajectory")
+            if not trajectory:
+                continue
+
+            # Parse if it's a JSON string
+            if isinstance(trajectory, str):
+                try:
+                    trajectory = json.loads(trajectory)
+                except (json.JSONDecodeError, TypeError):
+                    continue
+
+            if not isinstance(trajectory, list) or len(trajectory) == 0:
+                continue
+
+            trajectories_found += 1
+            has_tools = False
+
+            for step in trajectory:
+                if not isinstance(step, dict):
+                    continue
+
+                tool_name = step.get("tool_name")
+                if tool_name:
+                    has_tools = True
+                    total_tool_calls += 1
+                    tool_counts[tool_name] = tool_counts.get(tool_name, 0) + 1
+
+                    # Track duration
+                    duration_ms = step.get("duration_ms")
+                    if duration_ms is not None:
+                        if tool_name not in tool_durations:
+                            tool_durations[tool_name] = []
+                        tool_durations[tool_name].append(duration_ms)
+
+                    # Check for errors
+                    if step.get("error"):
+                        interactions_with_errors += 1
+
+            if has_tools:
+                interactions_with_tools += 1
+
+        if trajectories_found == 0:
+            return {
+                "available": False,
+                "message": "No trajectory data found in dataset"
+            }
+
+        # Calculate average durations
+        avg_durations = {
+            tool: round(sum(durations) / len(durations), 2)
+            for tool, durations in tool_durations.items()
+        }
+
+        avg_per_interaction = (
+            round(total_tool_calls / interactions_with_tools, 2)
+            if interactions_with_tools > 0
+            else 0
+        )
+
+        stats = {
+            "available": True,
+            "interactions_with_trajectory": trajectories_found,
+            "interactions_with_tools": interactions_with_tools,
+            "total_tool_calls": total_tool_calls,
+            "avg_tools_per_interaction": avg_per_interaction,
+            "tool_usage_counts": tool_counts,
+            "avg_tool_duration_ms": avg_durations,
+            "interactions_with_errors": interactions_with_errors,
+        }
+
+        print("\n🔧 Trajectory Analysis:")
+        print(
+            f"   Interactions with tools: "
+            f"{interactions_with_tools}/{trajectories_found}"
+        )
+        print(f"   Total tool calls: {total_tool_calls}")
+        if tool_counts:
+            print(f"   Tool usage: {tool_counts}")
+        if interactions_with_errors > 0:
+            print(f"   ⚠️  Tool errors: {interactions_with_errors}")
+
+        return stats
