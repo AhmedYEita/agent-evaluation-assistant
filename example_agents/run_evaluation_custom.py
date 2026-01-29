@@ -32,7 +32,7 @@ def main():
     agent, wrapper = create_agent()
 
     print(f"   Project: {agent_config['project_id']}")
-    print(f"   Agent: custom_agent")
+    print("   Agent: custom_agent")
     print()
 
     # Run evaluation test

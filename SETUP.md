@@ -33,7 +33,15 @@ Before you begin, ensure you have:
 
 ## Clone Repository
 
+Clone anywhere - works **inside or outside** your agent project:
+
 ```bash
+# Option A: Clone inside your agent project
+cd /path/to/your-agent-project
+git clone https://github.com/AhmedYEita/agent-evaluation-assistant
+cd agent-evaluation-assistant
+
+# Option B: Clone separately
 git clone https://github.com/AhmedYEita/agent-evaluation-assistant.git
 cd agent-evaluation-assistant
 ```
@@ -619,8 +627,9 @@ python run_evaluation.py  # Fetches test cases, runs agent, evaluates, saves res
 
 ### Available Metrics
 
-**Automated**: BLEU, ROUGE (fast, deterministic)  
-**Model-Based**: Coherence, Fluency, Safety, Groundedness, Fulfillment, Instruction Following, Verbosity
+**Computational Metrics**: BLEU, ROUGE (fast, deterministic)  
+**LLM-as-Judge Criteria**: Coherence, Fluency, Safety, Groundedness, Fulfillment, Instruction Following, Verbosity  
+**Trajectory Analysis**: Tool usage stats, performance, error rates (when `include_trajectories: true`)
 
 ### Configuration
 
@@ -668,9 +677,9 @@ Run the appropriate evaluation script to test your agent against the test datase
 
 | Table | Contains | Notes |
 |-------|----------|-------|
-| `{agent_name}_eval_dataset` | Test cases: `instruction`, `reference` | Source data for testing |
-| `{agent_name}_eval_run` | All test runs: `instruction`, `reference`, `response`, `test_run_name`, `test_timestamp` | Appends on each run |
-| `{agent_name}_eval_metrics` | All evaluation scores: `metrics`, `criteria_scores`, `test_run_name`, `test_timestamp` | Appends on each run |
+| `{agent_name}_eval_dataset` | Test cases: `instruction`, `reference`, `context`, `trajectory` | Source data for testing |
+| `{agent_name}_eval_run` | All test runs: `instruction`, `reference`, `response`, `test_run_name` | Appends on each run |
+| `{agent_name}_eval_metrics` | All evaluation scores: `metrics`, `criteria_scores`, `trajectory_stats` | Appends on each run |
 
 ---
 

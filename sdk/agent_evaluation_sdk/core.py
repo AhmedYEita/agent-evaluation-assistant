@@ -104,11 +104,11 @@ class EvaluationWrapper:
         @functools.wraps(original_method)
         async def wrapped(*args, **kwargs):
             interaction_id = str(uuid.uuid4())
-            
+
             # Initialize trajectory tracking for this interaction
             if self.config.logging.include_trajectories:
                 self._tool_traces.traces = []
-            
+
             # Extract input from new_message Content object
             input_data = ""
             if kwargs.get("new_message"):
@@ -143,8 +143,12 @@ class EvaluationWrapper:
 
                 # Get trajectory if tracking is enabled
                 trajectory = None
-                if self.config.logging.include_trajectories and hasattr(self._tool_traces, 'traces'):
-                    trajectory = self._tool_traces.traces if self._tool_traces.traces else None
+                if self.config.logging.include_trajectories and hasattr(
+                    self._tool_traces, 'traces'
+                ):
+                    trajectory = (
+                        self._tool_traces.traces if self._tool_traces.traces else None
+                    )
 
                 if not self._shutdown_called:
                     self._submit_observability(
@@ -328,7 +332,14 @@ class EvaluationWrapper:
             safe_submit(self._send_metrics, duration_ms, metadata, is_error)
 
         if self.dataset_collector:
-            safe_submit(self._send_dataset, interaction_id, input_data, output_data, metadata, trajectory)
+            safe_submit(
+                self._send_dataset,
+                interaction_id,
+                input_data,
+                output_data,
+                metadata,
+                trajectory,
+            )
 
     def _send_trace_spans(
         self,
@@ -488,13 +499,15 @@ class EvaluationWrapper:
             def wrapped(*args, **kwargs):
                 trace_context = getattr(self._trace_context, "context", None)
                 start = time.time()
-                
+
                 try:
                     result = func(*args, **kwargs)
                     duration_ms = (time.time() - start) * 1000
-                    
+
                     # Add to trajectory if tracking is enabled
-                    if self.config.logging.include_trajectories and hasattr(self._tool_traces, 'traces'):
+                    if self.config.logging.include_trajectories and hasattr(
+                        self._tool_traces, 'traces'
+                    ):
                         tool_entry = {
                             "type": "tool_call",
                             "tool_name": tool_name,
@@ -502,9 +515,13 @@ class EvaluationWrapper:
                             "timestamp": time.time()
                         }
                         self._tool_traces.traces.append(tool_entry)
-                    
+
                     # Send to tracer if available
-                    if self.tracer and trace_context and not self._shutdown_called:
+                    if (
+                        self.tracer
+                        and trace_context
+                        and not self._shutdown_called
+                    ):
                         trace_id, parent_span_id = trace_context
                         try:
                             self._executor.submit(
@@ -519,12 +536,14 @@ class EvaluationWrapper:
                         except RuntimeError:
                             pass
                     return result
-                    
+
                 except Exception as e:
                     duration_ms = (time.time() - start) * 1000
-                    
+
                     # Add error to trajectory if tracking is enabled
-                    if self.config.logging.include_trajectories and hasattr(self._tool_traces, 'traces'):
+                    if self.config.logging.include_trajectories and hasattr(
+                        self._tool_traces, 'traces'
+                    ):
                         tool_entry = {
                             "type": "tool_call",
                             "tool_name": tool_name,
@@ -533,9 +552,13 @@ class EvaluationWrapper:
                             "error": str(e)
                         }
                         self._tool_traces.traces.append(tool_entry)
-                    
+
                     # Send error to tracer if available
-                    if self.tracer and trace_context and not self._shutdown_called:
+                    if (
+                        self.tracer
+                        and trace_context
+                        and not self._shutdown_called
+                    ):
                         trace_id, parent_span_id = trace_context
                         try:
                             self._executor.submit(
