@@ -231,18 +231,20 @@ def _extract_local_imports(content: str) -> list:
     # Pattern 2: from module import ... (where module doesn't start with known external packages)
     absolute_imports = re.findall(r'from\s+([\w.]+)\s+import', content)
     for imp in absolute_imports:
-        # Filter out common external packages
+        # Filter out common external packages AND the AEA repo folder
         if not imp.split('.')[0] in ['os', 'sys', 'pathlib', 'typing', 'datetime', 'json', 'yaml', 
                                        're', 'asyncio', 'google', 'langchain', 'openai', 'anthropic',
                                        'requests', 'http', 'urllib', 'logging', 'argparse', 'functools',
-                                       'itertools', 'collections', 'dataclasses', 'enum', 'abc']:
+                                       'itertools', 'collections', 'dataclasses', 'enum', 'abc',
+                                       'agent_evaluation_sdk', 'agent_evaluation_assistant']:  # Skip AEA imports
             if '.' not in imp or len(imp.split('.')) <= 3:  # Likely local if short path
                 local_imports.append(imp)
     
     # Pattern 3: import module (where module is likely local)
     simple_imports = re.findall(r'^import\s+([\w]+)', content, re.MULTILINE)
     for imp in simple_imports:
-        if imp not in ['os', 'sys', 'pathlib', 'typing', 'datetime', 'json', 'yaml', 're', 'asyncio']:
+        if imp not in ['os', 'sys', 'pathlib', 'typing', 'datetime', 'json', 'yaml', 're', 'asyncio',
+                       'agent_evaluation_sdk', 'agent_evaluation_assistant']:  # Skip AEA imports
             local_imports.append(imp)
     
     return local_imports
@@ -269,6 +271,10 @@ def _resolve_import_path(import_str: str, base_dir: Path) -> Optional[Path]:
         # Handle absolute imports (relative to base_dir)
         parts = import_str.split('.')
         
+        # Skip if trying to import from AEA repo folders
+        if parts[0] in ['agent_evaluation_assistant', 'agent_evaluation_sdk']:
+            return None
+        
         # Try as direct file
         file_path = base_dir / f"{parts[0]}.py"
         if file_path.exists():
@@ -277,6 +283,10 @@ def _resolve_import_path(import_str: str, base_dir: Path) -> Optional[Path]:
         # Try as package
         package_path = base_dir / parts[0]
         if package_path.is_dir():
+            # Skip if this is the AEA repo folder
+            if package_path.name in ['agent_evaluation_assistant', 'agent_evaluation_sdk']:
+                return None
+                
             if len(parts) > 1:
                 # Multi-level import: tools.calculator -> tools/calculator.py
                 submodule = package_path / f"{parts[1]}.py"
