@@ -250,6 +250,7 @@ class RegressionTester:
             "dataset_size": eval_results.get("dataset_size", 0),
             "metrics": json.dumps(eval_results.get("metrics", {})),
             "criteria_scores": json.dumps(eval_results.get("criteria_scores", {})),
+            "trajectory_stats": json.dumps(eval_results.get("trajectory_stats", {})),
         }
 
         schema = [
@@ -259,6 +260,7 @@ class RegressionTester:
             bigquery.SchemaField("dataset_size", "INTEGER", mode="NULLABLE"),
             bigquery.SchemaField("metrics", "STRING", mode="NULLABLE"),
             bigquery.SchemaField("criteria_scores", "STRING", mode="NULLABLE"),
+            bigquery.SchemaField("trajectory_stats", "STRING", mode="NULLABLE"),
         ]
 
         # Create table if it doesn't exist

@@ -412,10 +412,10 @@ class EvaluationWrapper:
         except Exception as e:
             print(f"Warning: Failed to send metrics: {e}")
 
-    def _send_dataset(self, interaction_id, input_data, output_data, metadata):
+    def _send_dataset(self, interaction_id, input_data, output_data, metadata, trajectory=None):
         try:
             self.dataset_collector.add_interaction(
-                interaction_id, input_data, output_data, metadata
+                interaction_id, input_data, output_data, metadata, trajectory
             )
         except Exception as e:
             print(f"Warning: Failed to add dataset entry: {e}")
