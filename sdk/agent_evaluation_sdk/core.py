@@ -145,11 +145,9 @@ class EvaluationWrapper:
                 # Get trajectory if tracking is enabled
                 trajectory = None
                 if self.config.logging.include_trajectories and hasattr(
-                    self._tool_traces, 'traces'
+                    self._tool_traces, "traces"
                 ):
-                    trajectory = (
-                        self._tool_traces.traces if self._tool_traces.traces else None
-                    )
+                    trajectory = self._tool_traces.traces if self._tool_traces.traces else None
                     # Store for synchronous access
                     self._last_trajectory = trajectory.copy() if trajectory else None
 
@@ -517,22 +515,18 @@ class EvaluationWrapper:
 
                     # Add to trajectory if tracking is enabled
                     if self.config.logging.include_trajectories and hasattr(
-                        self._tool_traces, 'traces'
+                        self._tool_traces, "traces"
                     ):
                         tool_entry = {
                             "type": "tool_call",
                             "tool_name": tool_name,
                             "duration_ms": round(duration_ms, 2),
-                            "timestamp": time.time()
+                            "timestamp": time.time(),
                         }
                         self._tool_traces.traces.append(tool_entry)
 
                     # Send to tracer if available
-                    if (
-                        self.tracer
-                        and trace_context
-                        and not self._shutdown_called
-                    ):
+                    if self.tracer and trace_context and not self._shutdown_called:
                         trace_id, parent_span_id = trace_context
                         try:
                             self._executor.submit(
@@ -553,23 +547,19 @@ class EvaluationWrapper:
 
                     # Add error to trajectory if tracking is enabled
                     if self.config.logging.include_trajectories and hasattr(
-                        self._tool_traces, 'traces'
+                        self._tool_traces, "traces"
                     ):
                         tool_entry = {
                             "type": "tool_call",
                             "tool_name": tool_name,
                             "duration_ms": round(duration_ms, 2),
                             "timestamp": time.time(),
-                            "error": str(e)
+                            "error": str(e),
                         }
                         self._tool_traces.traces.append(tool_entry)
 
                     # Send error to tracer if available
-                    if (
-                        self.tracer
-                        and trace_context
-                        and not self._shutdown_called
-                    ):
+                    if self.tracer and trace_context and not self._shutdown_called:
                         trace_id, parent_span_id = trace_context
                         try:
                             self._executor.submit(

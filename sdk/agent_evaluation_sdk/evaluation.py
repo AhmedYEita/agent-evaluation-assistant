@@ -281,6 +281,7 @@ class GenAIEvaluator:
             # If trajectory exists, add it to context for model-based evaluation
             if trajectory:
                 import json
+
                 try:
                     # Parse trajectory if it's a string
                     if isinstance(trajectory, str):
@@ -295,29 +296,25 @@ class GenAIEvaluator:
                                 duration = step.get("duration_ms", "?")
                                 error = step.get("error")
                                 status = " (FAILED)" if error else ""
-                                tool_summary.append(
-                                    f"- {tool_name} ({duration}ms){status}"
-                                )
+                                tool_summary.append(f"- {tool_name} ({duration}ms){status}")
 
                         if tool_summary:
-                            trajectory_text = (
-                                "Tool calls:\n" + "\n".join(tool_summary)
-                            )
+                            trajectory_text = "Tool calls:\n" + "\n".join(tool_summary)
                             # Append trajectory to context
                             context = (
-                                f"{context}\n\n{trajectory_text}"
-                                if context
-                                else trajectory_text
+                                f"{context}\n\n{trajectory_text}" if context else trajectory_text
                             )
                 except (json.JSONDecodeError, TypeError):
                     pass  # Skip if trajectory can't be parsed
 
-            eval_data.append({
-                "prompt": item.get("instruction", ""),
-                "context": context,  # Now includes trajectory info
-                "reference": item.get("reference", ""),
-                "response": item.get("response", ""),
-            })
+            eval_data.append(
+                {
+                    "prompt": item.get("instruction", ""),
+                    "context": context,  # Now includes trajectory info
+                    "reference": item.get("reference", ""),
+                    "response": item.get("response", ""),
+                }
+            )
 
         eval_dataset = pd.DataFrame(eval_data)
 
@@ -460,9 +457,7 @@ class GenAIEvaluator:
         normalized_score = raw_score / 5.0 if raw_score > 1.0 else raw_score
         return 1.0 if normalized_score >= threshold else 0.0
 
-    def _analyze_trajectories(
-        self, dataset: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+    def _analyze_trajectories(self, dataset: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Analyze trajectory data from dataset.
 
         Args:
@@ -524,10 +519,7 @@ class GenAIEvaluator:
                 interactions_with_tools += 1
 
         if trajectories_found == 0:
-            return {
-                "available": False,
-                "message": "No trajectory data found in dataset"
-            }
+            return {"available": False, "message": "No trajectory data found in dataset"}
 
         # Calculate average durations
         avg_durations = {
@@ -553,10 +545,7 @@ class GenAIEvaluator:
         }
 
         print("\n🔧 Trajectory Analysis:")
-        print(
-            f"   Interactions with tools: "
-            f"{interactions_with_tools}/{trajectories_found}"
-        )
+        print(f"   Interactions with tools: {interactions_with_tools}/{trajectories_found}")
         print(f"   Total tool calls: {total_tool_calls}")
         if tool_counts:
             print(f"   Tool usage: {tool_counts}")

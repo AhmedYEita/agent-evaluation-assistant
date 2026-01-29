@@ -108,7 +108,7 @@ class RegressionTester:
         results = []
 
         # Check if agent has wrapper for trajectory access
-        wrapper = getattr(agent, '_evaluation_wrapper', None)
+        wrapper = getattr(agent, "_evaluation_wrapper", None)
 
         for i, test_case in enumerate(test_cases, 1):
             instruction = test_case.get("instruction", "")
@@ -130,7 +130,7 @@ class RegressionTester:
 
                 # Get trajectory from wrapper if available
                 trajectory = None
-                if wrapper and hasattr(wrapper, 'get_last_trajectory'):
+                if wrapper and hasattr(wrapper, "get_last_trajectory"):
                     trajectory = wrapper.get_last_trajectory()
 
             except Exception as e:
@@ -401,22 +401,15 @@ class RegressionTester:
                     score_info += f", pass_rate={scores['pass_rate']}"
                 print(f"  {criterion}: {score_info}")
 
-        if "trajectory_stats" in eval_results and eval_results[
-            "trajectory_stats"
-        ].get("available"):
+        if "trajectory_stats" in eval_results and eval_results["trajectory_stats"].get("available"):
             traj = eval_results["trajectory_stats"]
             print("\nTrajectory Analysis:")
-            print(
-                f"  Interactions with tools: {traj.get('interactions_with_tools', 0)}"
-            )
+            print(f"  Interactions with tools: {traj.get('interactions_with_tools', 0)}")
             print(f"  Total tool calls: {traj.get('total_tool_calls', 0)}")
-            print(
-                f"  Avg tools per interaction: "
-                f"{traj.get('avg_tools_per_interaction', 0)}"
-            )
-            if traj.get('tool_usage_counts'):
+            print(f"  Avg tools per interaction: {traj.get('avg_tools_per_interaction', 0)}")
+            if traj.get("tool_usage_counts"):
                 print(f"  Tool usage: {traj['tool_usage_counts']}")
-            if traj.get('interactions_with_errors', 0) > 0:
+            if traj.get("interactions_with_errors", 0) > 0:
                 print(f"  ⚠️  Errors: {traj['interactions_with_errors']}")
 
         print("\n💡 Query your results:")
