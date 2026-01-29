@@ -52,6 +52,7 @@ class EvaluationWrapper:
         self._shutdown_called = False
         self._original_methods: Dict[str, Callable] = {}
         self._tool_traces = threading.local()  # Track tool calls for trajectories per thread
+        self._last_trajectory = None  # Store last captured trajectory for synchronous access
         atexit.register(self._shutdown)
         self._wrap_agent()
 
@@ -149,6 +150,8 @@ class EvaluationWrapper:
                     trajectory = (
                         self._tool_traces.traces if self._tool_traces.traces else None
                     )
+                    # Store for synchronous access
+                    self._last_trajectory = trajectory.copy() if trajectory else None
 
                 if not self._shutdown_called:
                     self._submit_observability(
@@ -475,6 +478,14 @@ class EvaluationWrapper:
         if self.dataset_collector:
             self.dataset_collector.flush()
 
+    def get_last_trajectory(self):
+        """Get the trajectory from the last agent interaction.
+
+        Returns:
+            List of tool call dictionaries, or None if no trajectory captured
+        """
+        return self._last_trajectory
+
     def shutdown(self):
         """Public method for graceful shutdown.
 
@@ -621,4 +632,8 @@ def enable_evaluation(agent, project_id, agent_name, config_path=None):
         config.agent_name = agent_name
     else:
         config = EvaluationConfig.default(project_id=project_id, agent_name=agent_name)
-    return EvaluationWrapper(agent, config)
+
+    wrapper = EvaluationWrapper(agent, config)
+    # Store wrapper reference on agent for trajectory access during evaluation
+    agent._evaluation_wrapper = wrapper
+    return wrapper

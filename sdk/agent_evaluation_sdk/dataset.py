@@ -84,9 +84,9 @@ class DatasetCollector:
             "reference": response,  # Agent's response becomes the reference (ground truth)
             "context": None,  # Optional: can be populated from metadata
             "reviewed": False,  # Flag to track manual review status
-            # Additional debugging fields (serialize to JSON strings for BigQuery)
-            "metadata": json.dumps(metadata) if metadata else None,
-            "trajectory": json.dumps(trajectory) if trajectory else None,
+            # Additional fields (JSON type in BigQuery - no need to json.dumps)
+            "metadata": metadata if metadata else None,
+            "trajectory": trajectory if trajectory else None,
         }
 
         # Add to buffer
