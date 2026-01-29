@@ -2,6 +2,21 @@
 
 **Production-ready evaluation infrastructure for AI agents with one-line integration.**
 
+## Overview
+
+A Python SDK and Terraform infrastructure for comprehensive agent evaluation with minimal code changes. Get structured logging, performance tracing, metrics dashboards, dataset collection, and quality testing by adding a single line of code.
+
+### Key Features
+
+- **One-Line Integration**: `enable_evaluation(agent, project_id, agent_name, config)`
+- **Setup Assistant**: 3 modes - full setup, evaluation only, or troubleshooting ([see workflow](./assistant/README.md#how-the-assistant-works))
+- **Zero-Latency**: All Cloud API calls run in background threads
+- **Automated Observability**: Logs, traces, metrics, and datasets captured automatically
+- **Production-Ready**: Built on GCP services (Cloud Logging, Trace, Monitoring, BigQuery)
+- **Quality Evaluation**: Computational metrics (BLEU, ROUGE) + LLM-as-Judge criteria
+- **Infrastructure as Code**: Reproducible Terraform deployment
+- **Flexible Configuration**: Enable/disable services and tune performance
+
 ## 🚀 Quick Start
 
 ### 1. Clone & Install SDK
@@ -51,21 +66,6 @@ wrapper = enable_evaluation(agent, "your-gcp-project-id", "agent-name", "eval_co
 ```
 
 That's it! Your agent now has full observability.
-
-## Overview
-
-A Python SDK and Terraform infrastructure for comprehensive agent evaluation with minimal code changes. Get structured logging, performance tracing, metrics dashboards, dataset collection, and quality testing by adding a single line of code.
-
-### Key Features
-
-- **One-Line Integration**: `enable_evaluation(agent, project_id, agent_name, config)`
-- **Setup Assistant**: 3 modes - full setup, evaluation only, or troubleshooting ([see workflow](./assistant/README.md#how-the-assistant-works))
-- **Zero-Latency**: All Cloud API calls run in background threads
-- **Automated Observability**: Logs, traces, metrics, and datasets captured automatically
-- **Production-Ready**: Built on GCP services (Cloud Logging, Trace, Monitoring, BigQuery)
-- **Quality Evaluation**: Computational metrics (BLEU, ROUGE) + LLM-as-Judge criteria
-- **Infrastructure as Code**: Reproducible Terraform deployment
-- **Flexible Configuration**: Enable/disable services and tune performance
 
 ## What You Get
 
