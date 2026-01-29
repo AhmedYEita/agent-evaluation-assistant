@@ -6,10 +6,8 @@ import argparse
 import asyncio
 import time
 import yaml
-from pathlib import Path
 from google.adk import Agent
 from google.adk.runners import InMemoryRunner
-from google.adk.sessions import Session
 from google.adk.tools import FunctionTool
 from google.genai import types
 from agent_evaluation_sdk import enable_evaluation

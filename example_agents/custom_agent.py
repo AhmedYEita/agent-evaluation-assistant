@@ -7,7 +7,6 @@ Replace MyAgent with your actual agent class - it just needs a generate_content(
 import argparse
 import time
 import yaml
-from pathlib import Path
 from google import genai
 from google.genai import types
 from agent_evaluation_sdk import enable_evaluation

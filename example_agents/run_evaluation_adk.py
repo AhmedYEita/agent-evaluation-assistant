@@ -25,9 +25,6 @@ async def main():
     print()
 
     # Load configuration
-    with open("agent_config.yaml") as f:
-        agent_config = yaml.safe_load(f)
-    
     with open("eval_config.yaml") as f:
         eval_config = yaml.safe_load(f)
 
@@ -35,7 +32,7 @@ async def main():
     agent, runner, wrapper, config = create_adk_agent()
 
     print(f"   Project: {config['project_id']}")
-    print(f"   Agent: adk_agent")
+    print("   Agent: adk_agent")
     print()
 
     # Run evaluation test

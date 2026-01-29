@@ -2,7 +2,6 @@
 
 import os
 from pathlib import Path
-from typing import Optional
 
 
 def list_directory_tool(directory_path: str, max_depth: int = 2) -> dict:
@@ -57,7 +56,6 @@ def list_directory_tool(directory_path: str, max_depth: int = 2) -> dict:
             # Filter out common ignore patterns
             dirs[:] = [d for d in dirs if not d.startswith('.') and d not in ['__pycache__', 'node_modules', 'venv', '.venv', 'env']]
             
-            rel_root = Path(root).relative_to(path)
             indent = "  " * depth
             
             for dir_name in sorted(dirs):
