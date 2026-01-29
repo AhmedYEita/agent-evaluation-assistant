@@ -2,7 +2,6 @@
 Unit tests for configuration management.
 """
 
-
 import pytest
 import yaml
 
@@ -20,10 +19,7 @@ class TestEvaluationConfig:
 
     def test_default_config(self):
         """Test creating default configuration."""
-        config = EvaluationConfig.default(
-            project_id="test-project",
-            agent_name="test-agent"
-        )
+        config = EvaluationConfig.default(project_id="test-project", agent_name="test-agent")
 
         assert config.project_id == "test-project"
         assert config.agent_name == "test-agent"
@@ -104,4 +100,3 @@ class TestSubConfigs:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
-

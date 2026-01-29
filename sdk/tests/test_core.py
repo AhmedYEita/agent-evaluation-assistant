@@ -13,13 +13,11 @@ from agent_evaluation_sdk.core import EvaluationWrapper, enable_evaluation
 class TestEvaluationWrapper:
     """Tests for EvaluationWrapper class."""
 
-    @patch('agent_evaluation_sdk.core.CloudLogger')
-    @patch('agent_evaluation_sdk.core.CloudTracer')
-    @patch('agent_evaluation_sdk.core.CloudMetrics')
-    @patch('agent_evaluation_sdk.core.DatasetCollector')
-    def test_wrapper_initialization(
-        self, mock_dataset, mock_metrics, mock_tracer, mock_logger
-    ):
+    @patch("agent_evaluation_sdk.core.CloudLogger")
+    @patch("agent_evaluation_sdk.core.CloudTracer")
+    @patch("agent_evaluation_sdk.core.CloudMetrics")
+    @patch("agent_evaluation_sdk.core.DatasetCollector")
+    def test_wrapper_initialization(self, mock_dataset, mock_metrics, mock_tracer, mock_logger):
         """Test that wrapper initializes all components correctly."""
         # Arrange
         mock_agent = Mock()
@@ -38,13 +36,11 @@ class TestEvaluationWrapper:
         # DatasetCollector should NOT be called when auto_collect is False (default)
         mock_dataset.assert_not_called()
 
-    @patch('agent_evaluation_sdk.core.CloudLogger')
-    @patch('agent_evaluation_sdk.core.CloudTracer')
-    @patch('agent_evaluation_sdk.core.CloudMetrics')
-    @patch('agent_evaluation_sdk.core.DatasetCollector')
-    def test_agent_method_wrapping(
-        self, mock_dataset, mock_metrics, mock_tracer, mock_logger
-    ):
+    @patch("agent_evaluation_sdk.core.CloudLogger")
+    @patch("agent_evaluation_sdk.core.CloudTracer")
+    @patch("agent_evaluation_sdk.core.CloudMetrics")
+    @patch("agent_evaluation_sdk.core.DatasetCollector")
+    def test_agent_method_wrapping(self, mock_dataset, mock_metrics, mock_tracer, mock_logger):
         """Test that agent methods are wrapped correctly."""
         # Arrange
         mock_agent = Mock()
@@ -62,7 +58,7 @@ class TestEvaluationWrapper:
 class TestEnableEvaluation:
     """Tests for enable_evaluation function."""
 
-    @patch('agent_evaluation_sdk.core.EvaluationWrapper')
+    @patch("agent_evaluation_sdk.core.EvaluationWrapper")
     def test_enable_evaluation_basic(self, mock_wrapper_class):
         """Test basic enable_evaluation call."""
         # Arrange
@@ -72,17 +68,15 @@ class TestEnableEvaluation:
 
         # Act
         result = enable_evaluation(
-            agent=mock_agent,
-            project_id="test-project",
-            agent_name="test-agent"
+            agent=mock_agent, project_id="test-project", agent_name="test-agent"
         )
 
         # Assert
         assert result == mock_wrapper
         mock_wrapper_class.assert_called_once()
 
-    @patch('agent_evaluation_sdk.core.EvaluationWrapper')
-    @patch('agent_evaluation_sdk.core.EvaluationConfig')
+    @patch("agent_evaluation_sdk.core.EvaluationWrapper")
+    @patch("agent_evaluation_sdk.core.EvaluationConfig")
     def test_enable_evaluation_with_config(self, mock_config_class, mock_wrapper_class):
         """Test enable_evaluation with config file."""
         # Arrange
@@ -95,7 +89,7 @@ class TestEnableEvaluation:
             agent=mock_agent,
             project_id="test-project",
             agent_name="test-agent",
-            config_path="test_config.yaml"
+            config_path="test_config.yaml",
         )
 
         # Assert
@@ -105,13 +99,11 @@ class TestEnableEvaluation:
 class TestExtractMethods:
     """Tests for output and metadata extraction methods."""
 
-    @patch('agent_evaluation_sdk.core.CloudLogger')
-    @patch('agent_evaluation_sdk.core.CloudTracer')
-    @patch('agent_evaluation_sdk.core.CloudMetrics')
-    @patch('agent_evaluation_sdk.core.DatasetCollector')
-    def test_extract_output_string(
-        self, mock_dataset, mock_metrics, mock_tracer, mock_logger
-    ):
+    @patch("agent_evaluation_sdk.core.CloudLogger")
+    @patch("agent_evaluation_sdk.core.CloudTracer")
+    @patch("agent_evaluation_sdk.core.CloudMetrics")
+    @patch("agent_evaluation_sdk.core.DatasetCollector")
+    def test_extract_output_string(self, mock_dataset, mock_metrics, mock_tracer, mock_logger):
         """Test extracting output from string response."""
         # Arrange
         mock_agent = Mock()
@@ -124,10 +116,10 @@ class TestExtractMethods:
         # Assert
         assert output == "test response"
 
-    @patch('agent_evaluation_sdk.core.CloudLogger')
-    @patch('agent_evaluation_sdk.core.CloudTracer')
-    @patch('agent_evaluation_sdk.core.CloudMetrics')
-    @patch('agent_evaluation_sdk.core.DatasetCollector')
+    @patch("agent_evaluation_sdk.core.CloudLogger")
+    @patch("agent_evaluation_sdk.core.CloudTracer")
+    @patch("agent_evaluation_sdk.core.CloudMetrics")
+    @patch("agent_evaluation_sdk.core.DatasetCollector")
     def test_extract_output_with_text_attribute(
         self, mock_dataset, mock_metrics, mock_tracer, mock_logger
     ):
@@ -149,4 +141,3 @@ class TestExtractMethods:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
-

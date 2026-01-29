@@ -16,7 +16,7 @@ from agent_evaluation_sdk import enable_evaluation
 @pytest.mark.integration
 @pytest.mark.skipif(
     not os.environ.get("GCP_PROJECT_ID"),
-    reason="GCP_PROJECT_ID not set - skipping integration tests"
+    reason="GCP_PROJECT_ID not set - skipping integration tests",
 )
 class TestIntegration:
     """Integration tests that interact with real GCP services."""
@@ -32,9 +32,7 @@ class TestIntegration:
 
         # Enable evaluation
         wrapper = enable_evaluation(
-            agent=mock_agent,
-            project_id=project_id,
-            agent_name="integration-test-agent"
+            agent=mock_agent, project_id=project_id, agent_name="integration-test-agent"
         )
 
         # Verify wrapper was created
@@ -51,4 +49,3 @@ class TestIntegration:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "-m", "integration"])
-

@@ -23,11 +23,11 @@ def copy_config_template_tool(
     enable_tracing: bool,
     enable_metrics: bool,
     auto_collect: bool,
-    enable_evaluation: bool = False
+    enable_evaluation: bool = False,
 ) -> dict:
     """
     Copy and customize eval_config.yaml template
-    
+
     Args:
         repo_path: Path to agent-evaluation-assistant repository
         dest_path: Destination directory for the config file
@@ -36,7 +36,7 @@ def copy_config_template_tool(
         enable_metrics: Enable Cloud Monitoring
         auto_collect: Enable dataset auto-collection
         enable_evaluation: Enable Gen AI Evaluation (adds genai_eval and regression sections)
-    
+
     Returns:
         {
             "success": bool,
@@ -46,36 +46,38 @@ def copy_config_template_tool(
     """
     try:
         repo = _find_repo_root(Path(repo_path))
-        template_path = repo / "sdk/agent_evaluation_sdk/templates/eval_config.template.yaml"
+        template_path = (
+            repo / "sdk/agent_evaluation_sdk/templates/eval_config.template.yaml"
+        )
         dest_file = Path(dest_path).expanduser() / "eval_config.yaml"
-        
+
         if not template_path.exists():
             return {
                 "success": False,
                 "config_path": None,
-                "message": f"Template not found at: {template_path}. Please provide the ROOT path of agent-evaluation-assistant repository."
+                "message": f"Template not found at: {template_path}. Please provide the ROOT path of agent-evaluation-assistant repository.",
             }
-        
+
         # Read template
         with open(template_path) as f:
             config = yaml.safe_load(f)
-        
+
         # Customize based on user preferences
-        config['logging']['enabled'] = enable_logging
-        config['tracing']['enabled'] = enable_tracing
-        config['metrics']['enabled'] = enable_metrics
-        config['dataset']['auto_collect'] = auto_collect
-        
+        config["logging"]["enabled"] = enable_logging
+        config["tracing"]["enabled"] = enable_tracing
+        config["metrics"]["enabled"] = enable_metrics
+        config["dataset"]["auto_collect"] = auto_collect
+
         # Conditionally include evaluation sections
         if not enable_evaluation:
-            config.pop('genai_eval', None)
-            config.pop('regression', None)
-        
+            config.pop("genai_eval", None)
+            config.pop("regression", None)
+
         # Write customized config
         dest_file.parent.mkdir(parents=True, exist_ok=True)
-        with open(dest_file, 'w') as f:
+        with open(dest_file, "w") as f:
             yaml.dump(config, f, default_flow_style=False, sort_keys=False)
-        
+
         # Build summary
         enabled_services = []
         if enable_logging:
@@ -84,34 +86,30 @@ def copy_config_template_tool(
             enabled_services.append("Tracing")
         if enable_metrics:
             enabled_services.append("Metrics")
-        
+
         summary = f"✓ Created eval_config.yaml with: {', '.join(enabled_services)}. Dataset collection: {'ON' if auto_collect else 'OFF'}"
         if enable_evaluation:
             summary += ". Gen AI Evaluation: Enabled"
         else:
             summary += ". Gen AI Evaluation: Disabled (can add later)"
-        
-        return {
-            "success": True,
-            "config_path": str(dest_file),
-            "message": summary
-        }
-    
+
+        return {"success": True, "config_path": str(dest_file), "message": summary}
+
     except Exception as e:
         return {
             "success": False,
             "config_path": None,
-            "message": f"Error creating config: {e}"
+            "message": f"Error creating config: {e}",
         }
 
 
 def add_evaluation_config_tool(config_path: str) -> dict:
     """
     Add Gen AI Evaluation and Regression Testing sections to existing eval_config.yaml
-    
+
     Args:
         config_path: Path to existing eval_config.yaml file
-    
+
     Returns:
         {
             "success": bool,
@@ -120,57 +118,53 @@ def add_evaluation_config_tool(config_path: str) -> dict:
     """
     try:
         config_file = Path(config_path).expanduser()
-        
+
         if not config_file.exists():
             return {
                 "success": False,
-                "message": f"Config file not found: {config_path}"
+                "message": f"Config file not found: {config_path}",
             }
-        
+
         # Read existing config
         with open(config_file) as f:
             config = yaml.safe_load(f) or {}
-        
+
         # Check if evaluation sections already exist
-        if 'genai_eval' in config or 'regression' in config:
+        if "genai_eval" in config or "regression" in config:
             return {
                 "success": False,
-                "message": "Evaluation sections (genai_eval/regression) already exist in config file"
+                "message": "Evaluation sections (genai_eval/regression) already exist in config file",
             }
-        
+
         # Add evaluation sections
-        config['genai_eval'] = {
-            'metrics': ['bleu', 'rouge'],
-            'model_name': 'gemini-2.5-flash',
-            'criteria': ['coherence', 'fluency', 'safety', 'groundedness'],
-            'thresholds': {
-                'bleu': 0.5,
-                'rouge': 0.5,
-                'coherence': 0.7,
-                'fluency': 0.7,
-                'safety': 0.9,
-                'groundedness': 0.7
-            }
-        }
-        
-        config['regression'] = {
-            'test_limit': None,
-            'only_reviewed': True,
-            'dataset_table': None
-        }
-        
-        # Write updated config
-        with open(config_file, 'w') as f:
-            yaml.dump(config, f, default_flow_style=False, sort_keys=False)
-        
-        return {
-            "success": True,
-            "message": "✓ Added Gen AI Evaluation and Regression Testing sections to eval_config.yaml"
-        }
-    
-    except Exception as e:
-        return {
-            "success": False,
-            "message": f"Error adding evaluation config: {e}"
+        config["genai_eval"] = {
+            "metrics": ["bleu", "rouge"],
+            "model_name": "gemini-2.5-flash",
+            "criteria": ["coherence", "fluency", "safety", "groundedness"],
+            "thresholds": {
+                "bleu": 0.5,
+                "rouge": 0.5,
+                "coherence": 0.7,
+                "fluency": 0.7,
+                "safety": 0.9,
+                "groundedness": 0.7,
+            },
         }
 
+        config["regression"] = {
+            "test_limit": None,
+            "only_reviewed": True,
+            "dataset_table": None,
+        }
+
+        # Write updated config
+        with open(config_file, "w") as f:
+            yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+
+        return {
+            "success": True,
+            "message": "✓ Added Gen AI Evaluation and Regression Testing sections to eval_config.yaml",
+        }
+
+    except Exception as e:
+        return {"success": False, "message": f"Error adding evaluation config: {e}"}

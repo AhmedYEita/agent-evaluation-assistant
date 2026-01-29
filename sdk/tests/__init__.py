@@ -21,4 +21,3 @@ def sample_project_id():
 def sample_agent_name():
     """Provide a sample agent name for testing."""
     return "test-agent"
-

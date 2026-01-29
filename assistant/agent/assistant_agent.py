@@ -47,11 +47,13 @@ def create_assistant():
             "GOOGLE_CLOUD_PROJECT environment variable not set.\n"
             "Set it with: export GOOGLE_CLOUD_PROJECT=your-project-id"
         )
-    
+
     os.environ["GOOGLE_CLOUD_PROJECT"] = project_id
-    os.environ["GOOGLE_CLOUD_LOCATION"] = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
+    os.environ["GOOGLE_CLOUD_LOCATION"] = os.getenv(
+        "GOOGLE_CLOUD_LOCATION", "us-central1"
+    )
     os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "1"
-    
+
     tools = [
         list_directory_tool,
         check_eval_config_exists_tool,
@@ -67,54 +69,64 @@ def create_assistant():
         add_evaluation_config_tool,
         generate_evaluation_script_tool,
     ]
-    
+
     agent = Agent(
         name="setup_assistant",
         model="gemini-2.5-flash",
         instruction=SYSTEM_INSTRUCTION,
         tools=tools,
     )
-    
+
     return agent, InMemoryRunner(agent=agent, app_name="setup_assistant")
 
 
 async def run():
     """Run assistant"""
     agent, runner = create_assistant()
-    session = await runner.session_service.create_session(app_name="setup_assistant", user_id="user")
-    
-    print("\n" + "="*60)
+    session = await runner.session_service.create_session(
+        app_name="setup_assistant", user_id="user"
+    )
+
+    print("\n" + "=" * 60)
     print("🤖 Agent Evaluation Setup Assistant")
-    print("="*60)
+    print("=" * 60)
     print("\nType 'exit', 'quit', or 'q' to end.\n")
     print("Assistant: Hi! I help with Agent Evaluation SDK setup and questions.")
     print("          What would you like help with?")
     print("          1. Full setup (SDK + infrastructure)")
     print("          2. Evaluation script only")
     print("          3. Questions or troubleshooting\n")
-    
+
     while True:
         try:
             user_input = input("You: ").strip()
             if not user_input:
                 continue
-            if user_input.lower() in ['exit', 'quit', 'q']:
+            if user_input.lower() in ["exit", "quit", "q"]:
                 print("\nAssistant: Good luck! 🎉\n")
                 break
-            
-            content = types.Content(role="user", parts=[types.Part.from_text(text=user_input)])
-            
+
+            content = types.Content(
+                role="user", parts=[types.Part.from_text(text=user_input)]
+            )
+
             response_text = ""
-            async for event in runner.run_async(user_id="user", session_id=session.id, new_message=content):
-                if event.content and hasattr(event.content, 'parts') and event.content.parts:
+            async for event in runner.run_async(
+                user_id="user", session_id=session.id, new_message=content
+            ):
+                if (
+                    event.content
+                    and hasattr(event.content, "parts")
+                    and event.content.parts
+                ):
                     for part in event.content.parts:
-                        if hasattr(part, 'text') and part.text:
+                        if hasattr(part, "text") and part.text:
                             response_text = part.text
                             break
-            
+
             if response_text:
                 print(f"\nAssistant: {response_text}\n")
-            
+
         except KeyboardInterrupt:
             print("\n\nInterrupted. Bye! 👋\n")
             break

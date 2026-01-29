@@ -38,73 +38,72 @@ def create_adk_agent():
     """Create ADK agent with evaluation."""
     # Load configuration
     config = load_agent_config()
-    
+
     # Configure Vertex AI for ADK (ADK uses environment variables)
     os.environ["GOOGLE_CLOUD_PROJECT"] = config["project_id"]
     os.environ["GOOGLE_CLOUD_LOCATION"] = config["location"]
     os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "1"
-    
+
     # Create ADK agent first (without tools)
     agent = Agent(
         name="adk_agent",
         model=config["model"],
         instruction="You are a helpful assistant. Provide concise, clear answers.",
     )
-    
+
     # Create runner
     runner = InMemoryRunner(agent=agent, app_name="adk_agent_app")
-    
+
     # Enable evaluation on runner (wraps runner.run_async which is an async generator)
     wrapper = enable_evaluation(
-        runner, 
-        config["project_id"], 
-        "adk_agent", 
-        "eval_config.yaml"
+        runner, config["project_id"], "adk_agent", "eval_config.yaml"
     )
-    
+
     # Define mock tools WITH tracing decorator
     @wrapper.tool_trace("search")
     def search_tool(query: str) -> str:
         time.sleep(0.5)
         return f"Mock search results for: {query}"
-    
+
     @wrapper.tool_trace("calculator")
     def calculator_tool(expression: str) -> str:
         time.sleep(0.2)
         return "Mock result: 42"
-    
+
     # Create ADK tools with wrapped functions
     search = FunctionTool(search_tool)
     calculator = FunctionTool(calculator_tool)
-    
+
     # Add tools to agent
     agent.tools = [search, calculator]
-    
+
     return agent, runner, wrapper, config
 
 
 async def run_test_queries():
     """Run test queries."""
     agent, runner, wrapper, config = create_adk_agent()
-    
+
     # Create session
     session = await runner.session_service.create_session(
         app_name="adk_agent_app", user_id="test_user"
     )
-    
+
     print("=" * 70)
     print("Running Test Queries")
     print("=" * 70)
     print(f"\nTotal queries: {len(TEST_QUERIES)}")
     print("This will generate a dataset for evaluation.\n")
-    
+
     results = []
     for i, query in enumerate(TEST_QUERIES, 1):
         print(f"\n[{i}/{len(TEST_QUERIES)}] Query: {query}")
         try:
             start = time.time()
-            content = types.Content(role="user", parts=[types.Part.from_text(text=query)])
-            
+            content = types.Content(
+                role="user", parts=[types.Part.from_text(text=query)]
+            )
+
             # Collect response from async generator
             response_text = ""
             async for event in runner.run_async(
@@ -114,11 +113,11 @@ async def run_test_queries():
             ):
                 if event.content.parts and event.content.parts[0].text:
                     response_text = event.content.parts[0].text
-            
+
             duration = (time.time() - start) * 1000
             print(f"Response: {response_text[:100]}...")
             print(f"⏱️  {duration:.0f}ms")
-            
+
             results.append(
                 {
                     "query": query,
@@ -138,7 +137,7 @@ async def run_test_queries():
                     "error": str(e),
                 }
             )
-    
+
     # Summary
     print("\n" + "=" * 70)
     print("Test Summary")
@@ -154,13 +153,13 @@ async def run_test_queries():
     print(f"✅ Successful: {successful}/{len(results)}")
     print(f"❌ Failed: {failed}/{len(results)}")
     print(f"⏱️  Average response time: {avg_duration:.0f}ms")
-    
+
     # Flush before shutdown to ensure all data is written
     time.sleep(2)  # Give time for async operations to complete
     wrapper.flush()
     time.sleep(1)  # Give time for flush to complete
     wrapper.shutdown()
-    
+
     print("\n" + "=" * 70)
     print("✅ Test complete! Dataset ready for evaluation.")
     print("📊 View data in GCP Console (Logs, Traces, BigQuery)")
@@ -170,14 +169,14 @@ async def run_test_queries():
 async def run_interactive():
     """Run agent in interactive mode."""
     agent, runner, wrapper, config = create_adk_agent()
-    
+
     # Create session
     session = await runner.session_service.create_session(
         app_name="adk_agent_app", user_id="interactive_user"
     )
-    
+
     print("ADK Agent is ready! Type 'quit' to exit.\n")
-    
+
     while True:
         try:
             user_input = input("You: ").strip()
@@ -185,9 +184,11 @@ async def run_interactive():
                 break
             if not user_input:
                 continue
-            
-            content = types.Content(role="user", parts=[types.Part.from_text(text=user_input)])
-            
+
+            content = types.Content(
+                role="user", parts=[types.Part.from_text(text=user_input)]
+            )
+
             # Collect response from async generator
             response_text = ""
             async for event in runner.run_async(
@@ -197,9 +198,9 @@ async def run_interactive():
             ):
                 if event.content.parts and event.content.parts[0].text:
                     response_text = event.content.parts[0].text
-            
+
             print(f"Agent: {response_text}\n")
-            
+
         except KeyboardInterrupt:
             break
         except Exception as e:
@@ -222,9 +223,9 @@ async def main():
         action="store_true",
         help="Run test queries instead of interactive mode",
     )
-    
+
     args = parser.parse_args()
-    
+
     if args.test:
         await run_test_queries()
     else:
