@@ -97,17 +97,9 @@ flowchart TD
 
 ### Step 1: Clone SDK Repository
 
-Clone anywhere - works **inside or outside** your agent project:
+Clone anywhere - **inside or outside** your agent project:
 
 ```bash
-# Option A: Clone inside your agent project
-cd /path/to/your-agent-project
-git clone https://github.com/AhmedYEita/agent-evaluation-assistant
-cd agent-evaluation-assistant
-pip install -e ./sdk
-
-# Option B: Clone separately  
-cd ~/repos
 git clone https://github.com/AhmedYEita/agent-evaluation-assistant
 cd agent-evaluation-assistant
 pip install -e ./sdk
@@ -125,62 +117,62 @@ python assistant_agent.py
 
 ### Step 3: Follow the Interactive Setup
 
-The assistant will ask for your agent project path (e.g., `~/repos/my-agent-project`) and copy the necessary files there.
+The assistant adapts to your project structure and provides personalized guidance.
 
 ## What It Does
 
-The assistant **conversationally** guides you through:
+The assistant provides **3 modes of operation**:
 
-1. ✅ Getting your agent project path
-2. ✅ Checking agent compatibility (`generate_content()` or `run_async()`)
-3. ✅ Configuring observability (logging, tracing, metrics)
-4. ✅ Setting up dataset collection
-5. ✅ Generating `eval_config.yaml` in your project
-6. ✅ Copying terraform to your project
-7. ✅ Showing SDK integration code with your values
+1. **Full Setup** - Complete SDK integration + infrastructure deployment
+2. **Evaluation Script Only** - Generate `run_evaluation.py` (assumes SDK already integrated)
+3. **Inquiries/Troubleshooting** - Answer questions and investigate issues
+
+**Intelligent capabilities:**
+- 🔍 **Discovers your code structure** - Scans all Python files to detect ADK or custom agent patterns
+- 🎯 **Generates configs in your project** - Creates `eval_config.yaml` tailored to your needs
+- 🏗️ **Copies infrastructure** - Deploys Terraform modules to your project directory
+- 📝 **Provides integration code** - Shows exact code snippets for your agent type
+- ✅ **Validates compatibility** - Checks agent structure before making changes
 
 ## Architecture
 
 Built with Google ADK (Agent Development Kit):
 - **Model**: Gemini 2.5 Flash
 - **Tools**: File operations, config validation, infrastructure checks
-- **Conversational**: Adapts to your responses, not a rigid script
+- **Adaptive**: Understands multi-file projects and imports
 
-## Example Interaction
+## What You Get
 
-```
-🤖 Assistant: Hi! I'll help you set up agent evaluation. Ready to start?
-You: Yes
-🤖 Assistant: What's the path to your agent project?
-You: ~/my-agent
-🤖 Assistant: What's your agent file path (with generate_content method)?
-You: ~/my-agent/agent.py
-🤖 Assistant: ✓ Agent compatible! Configure observability: all/logging/tracing?
-You: all
-🤖 Assistant: Enable dataset collection?
-You: no
-🤖 Assistant: What's your GCP project ID?
-You: my-project-123
-🤖 Assistant: ✓ Created eval_config.yaml
-              ✓ Copied terraform
-              
-              Integrate SDK:
-              wrapper = enable_evaluation(agent, "my-project-123", "my-agent", "eval_config.yaml")
-              
-              Deploy: cd terraform && terraform apply
-```
+**For Mode 1 (Full Setup):**
+- ✅ SDK copied to your project
+- ✅ `eval_config.yaml` with your settings
+- ✅ Terraform infrastructure in your project
+- ✅ Integration code examples for your agent type
+- ✅ Step-by-step deployment instructions
+
+**For Mode 2 (Evaluation Script Only):**
+- ✅ `run_evaluation.py` tailored to your agent
+- ✅ Updated `eval_config.yaml` with evaluation settings
+- ✅ Guidance on running regression tests
+
+**For Mode 3 (Inquiries):**
+- ✅ Answers about configuration options
+- ✅ Troubleshooting guidance
+- ✅ Infrastructure status checks
 
 ## Files
 
 ```
 assistant/agent/
 ├── assistant_agent.py          # Main ADK agent
-├── system_instruction.prompt   # Conversation flow & personality
+├── system_instruction.prompt   # Conversation flow & logic
 ├── requirements.txt            # Dependencies
 └── tools/
     ├── config_operations.py    # Generate configs
-    ├── file_operations.py      # Copy files, check compatibility
+    ├── file_operations.py      # Discover & check compatibility
+    ├── evaluation_script_generation.py  # Generate evaluation scripts
     ├── config_validator.py     # Validate YAML
+    ├── terraform_operations.py # Copy infrastructure
     └── infra_checker.py        # Check GCP resources
 ```
 
@@ -188,8 +180,11 @@ assistant/agent/
 
 | Tool | Purpose |
 |------|---------|
-| `check_agent_compatibility_tool` | Verify agent has required methods |
+| `list_directory_tool` | Explore project structure |
+| `read_file_tool` | Read agent files and imports |
+| `check_agent_compatibility_tool` | Scan all Python files for agent patterns |
 | `copy_config_template_tool` | Generate customized eval_config.yaml |
+| `generate_evaluation_script_tool` | Create run_evaluation.py for your agent |
 | `copy_terraform_module_tool` | Copy terraform to agent project |
 | `validate_config_tool` | Check YAML syntax |
 | `check_infrastructure_tool` | Verify GCP resources exist |

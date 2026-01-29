@@ -6,17 +6,9 @@
 
 ### 1. Clone & Install SDK
 
-Clone anywhere - works **inside or outside** your agent project:
+Clone anywhere - **inside or outside** your agent project:
 
 ```bash
-# Option A: Clone inside your agent project
-cd /path/to/your-agent-project
-git clone https://github.com/AhmedYEita/agent-evaluation-assistant
-cd agent-evaluation-assistant
-pip install -e ./sdk
-
-# Option B: Clone separately
-cd ~/repos
 git clone https://github.com/AhmedYEita/agent-evaluation-assistant
 cd agent-evaluation-assistant
 pip install -e ./sdk
@@ -35,20 +27,27 @@ export GOOGLE_CLOUD_REGION="us-central1"
 python assistant_agent.py
 ```
 
-The assistant will guide you through:
-- ✅ Getting your agent project path
-- ✅ Verifying agent compatibility
-- ✅ Generating configuration files **in your project**
-- ✅ Setting up Terraform infrastructure **in your project**
-- ✅ Showing integration code
+**The assistant will:**
+- 🔍 **Intelligent Discovery** - Scans all Python files (up to 4 levels deep) to detect agent patterns
+- 🎯 **Auto-Detect Agent Type** - Identifies ADK or Custom agent patterns
+- 📝 **Generate Configs** - Creates `eval_config.yaml` and `run_evaluation.py` tailored to your agent
+- 🏗️ **Copy Infrastructure** - Deploys Terraform modules directly to your project
+- 💡 **Provide Integration Code** - Shows exact snippets for your specific agent structure
+- ✅ **Validate Changes** - Checks correctness of the applied changes
 
-### 3. Enable Evaluation
+### 3. Integrate & Deploy
+
+Follow the assistant's guidance to:
 
 ```python
+# 1. Add to your agent code (assistant provides exact snippet)
 from agent_evaluation_sdk import enable_evaluation
 
 agent = YourAgent(...)
 wrapper = enable_evaluation(agent, "your-gcp-project-id", "agent-name", "eval_config.yaml")
+
+# 2. Deploy infrastructure (assistant copies terraform to your project)
+# cd terraform && terraform init && terraform apply
 ```
 
 That's it! Your agent now has full observability.
@@ -60,57 +59,31 @@ A Python SDK and Terraform infrastructure for comprehensive agent evaluation wit
 ### Key Features
 
 - **One-Line Integration**: `enable_evaluation(agent, project_id, agent_name, config)`
-- **Setup Assistant**: Interactive ADK agent guides you through setup ([see workflow](./assistant/README.md#how-the-assistant-works))
+- **Setup Assistant**: 3 modes - full setup, evaluation only, or troubleshooting ([see workflow](./assistant/README.md#how-the-assistant-works))
 - **Zero-Latency**: All Cloud API calls run in background threads
 - **Automated Observability**: Logs, traces, metrics, and datasets captured automatically
 - **Production-Ready**: Built on GCP services (Cloud Logging, Trace, Monitoring, BigQuery)
-- **Quality Evaluation**: Vertex AI Gen AI Evaluation Service for automated and model-based metrics
+- **Quality Evaluation**: Computational metrics (BLEU, ROUGE) + LLM-as-Judge criteria
 - **Infrastructure as Code**: Reproducible Terraform deployment
 - **Flexible Configuration**: Enable/disable services and tune performance
 
 ## What You Get
 
 ### Automatic Monitoring
-- ✅ **Cloud Logging** - Every interaction logged with interaction_id, input, output, duration
-- ✅ **Cloud Trace** - Nested spans show LLM calls, processing time, tool usage
-- ✅ **Cloud Monitoring** - Pre-built dashboard with latency, errors, token usage
-- ✅ **Dataset Collection** - Optional auto-capture to BigQuery for testing
+- ✅ **Cloud Logging** - Every interaction with context (interaction_id, input, output, duration)
+- ✅ **Cloud Trace** - Performance breakdown (LLM calls, tool usage, processing time)
+- ✅ **Cloud Monitoring** - Pre-built dashboard (latency, errors, token usage)
+- ✅ **Dataset Collection** - Auto-capture interactions → BigQuery test cases
 
 ### Quality Testing
-- 🧪 **Regression Testing** - Test against historical dataset
-- 📊 **Automated Metrics** - BLEU, ROUGE scores
-- 🎯 **Model-Based Criteria** - Coherence, fluency, safety, groundedness
+- 🧪 **Regression Testing** - Run agent on historical test cases
+- 📊 **Computational Metrics** - BLEU, ROUGE scores for response quality
+- 🎯 **LLM-as-Judge** - Model evaluates coherence, fluency, safety, groundedness
+- 🔧 **Trajectory Analysis** - Tool usage patterns, timing, error rates
 - 📈 **Performance Tracking** - Compare test runs over time
 
-## Evaluation Workflow
-
-```bash
-# 1. Enable dataset collection
-# Set auto_collect: true in eval_config.yaml
-
-# 2. Run agent to collect data
-python your_agent.py --test
-
-# 3. Review & update reference answers in BigQuery
-# Set reviewed=TRUE after verification
-
-# 4. Disable collection
-# Set auto_collect: false in eval_config.yaml
-
-# 5. Run evaluation
-python run_evaluation.py
-```
-
-## Documentation
-
-- **[SETUP.md](./SETUP.md)** - Complete setup guide (GCP, Terraform, configuration, troubleshooting)
-- **[assistant/README.md](./assistant/README.md)** - Setup assistant usage and architecture
-- **[sdk/README.md](./sdk/README.md)** - SDK API reference
-- **[example_agents/README.md](./example_agents/README.md)** - Running example agents
-- **[ROADMAP.md](./ROADMAP.md)** - Future enhancements (A2A, PyPI distribution)
-- **[CONTRIBUTING.md](./CONTRIBUTING.md)** - Development workflow
-
-## Data Flow & Evaluation Architecture
+### Data Flow & Evaluation Architecture
+## How It Works
 
 ```mermaid
 graph TB
@@ -181,6 +154,25 @@ graph TB
 - 🧪 **Quality Testing** - Computational metrics (BLEU, ROUGE) + LLM-as-Judge criteria
 - 📈 **Trend Analysis** - Track performance over time
 
+## Evaluation Workflow
+
+```bash
+# 1. Enable dataset collection
+# Set auto_collect: true in eval_config.yaml
+
+# 2. Run agent to collect data
+python your_agent.py --test
+
+# 3. Review & update reference answers in BigQuery
+# Set reviewed=TRUE after verification
+
+# 4. Disable collection
+# Set auto_collect: false in eval_config.yaml
+
+# 5. Run evaluation
+python run_evaluation.py
+```
+
 ## Repository Structure
 
 ```
@@ -214,4 +206,13 @@ graph TB
 
 **Manual Setup:** Prefer not to use the assistant? See [SETUP.md](./SETUP.md#manual-setup-alternative) for step-by-step manual configuration.
 
-### Data Flow & Evaluation Architecture
+---
+
+## Documentation
+
+- **[SETUP.md](./SETUP.md)** - Complete setup guide (GCP, Terraform, configuration, troubleshooting)
+- **[assistant/README.md](./assistant/README.md)** - Setup assistant usage and architecture
+- **[sdk/README.md](./sdk/README.md)** - SDK API reference
+- **[example_agents/README.md](./example_agents/README.md)** - Running example agents
+- **[ROADMAP.md](./ROADMAP.md)** - Future enhancements (A2A, PyPI distribution)
+- **[CONTRIBUTING.md](./CONTRIBUTING.md)** - Development workflow
