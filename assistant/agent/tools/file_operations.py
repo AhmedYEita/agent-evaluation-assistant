@@ -123,7 +123,7 @@ def check_agent_compatibility_tool(agent_file_path: str) -> dict:
     Reads the main agent file and follows local imports to check for required patterns
     
     Args:
-        agent_file_path: Path to the agent Python file
+        agent_file_path: Path to the agent Python file (can be absolute or relative)
     
     Returns:
         {
@@ -137,6 +137,10 @@ def check_agent_compatibility_tool(agent_file_path: str) -> dict:
     """
     agent_path = Path(agent_file_path).expanduser()
     
+    # If path is relative, try to resolve it from current working directory
+    if not agent_path.is_absolute():
+        agent_path = Path.cwd() / agent_path
+    
     if not agent_path.exists():
         return {
             "compatible": False,
@@ -144,7 +148,7 @@ def check_agent_compatibility_tool(agent_file_path: str) -> dict:
             "has_generate_content": False,
             "has_runner": False,
             "files_checked": [],
-            "message": f"File not found: {agent_file_path}"
+            "message": f"File not found: {agent_file_path}\nResolved to: {agent_path}\nPlease provide the full path or ensure you're in the correct directory."
         }
     
     try:
