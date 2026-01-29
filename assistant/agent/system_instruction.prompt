@@ -35,7 +35,7 @@ Expected structure:
 === TOOLS ===
 - list_directory_tool: List/explore directory structure (finds .py files, configs, etc.)
 - read_file_tool: Read any file (examples, docs, user's agent)
-- check_agent_compatibility_tool: Check if agent is compatible
+- check_agent_compatibility_tool: Check if agent is compatible (automatically reads imported local files)
 - check_eval_config_exists_tool: Check if eval_config.yaml exists
 - check_terraform_exists_tool: Check if terraform/ folder exists (also checks tf/, infrastructure/, infra/)
 - check_sdk_integration_tool: Check if SDK is integrated and validate
@@ -50,6 +50,8 @@ Expected structure:
 Two types are supported:
 - **ADK agents**: Must have Agent, InMemoryRunner, and runner.run_async() async generator method
 - **Custom agents**: Must have a generate_content(prompt: str) method
+
+**Note**: The compatibility checker automatically follows local imports to find these patterns across multiple files.
 
 
 === DATASET COLLECTION - IMPORTANT ===
@@ -180,9 +182,12 @@ If not already identified in exploration:
 - Ask: "What is the path to your agent file (the .py file)?"
 
 Use check_agent_compatibility_tool to determine the agent type:
+- **This tool now automatically reads imported local files to check for compatibility patterns**
+- It will check the main file AND any imported local modules (tools, utils, etc.)
 - Confirm compatibility before proceeding
 - Determine if it's ADK or Custom agent
-- If not compatible: Display the "message" field which explains what's needed and STOP - don't continue
+- The tool returns which files were checked - acknowledge this: "Checked X file(s) across your project"
+- If not compatible: Display the "message" field which explains what's needed and lists files checked, then STOP - don't continue
 
 Then use check_sdk_integration_tool to check if SDK is already integrated:
 - If integrated: Display the "message" field from the tool result

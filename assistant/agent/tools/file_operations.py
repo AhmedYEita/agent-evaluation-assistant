@@ -120,6 +120,7 @@ def read_file_tool(file_path: str) -> dict:
 def check_agent_compatibility_tool(agent_file_path: str) -> dict:
     """
     Check if user's agent is compatible with the SDK
+    Reads the main agent file and follows local imports to check for required patterns
     
     Args:
         agent_file_path: Path to the agent Python file
@@ -130,6 +131,7 @@ def check_agent_compatibility_tool(agent_file_path: str) -> dict:
             "agent_type": str (either "adk" or "custom"),
             "has_generate_content": bool,
             "has_runner": bool,
+            "files_checked": list of str,
             "message": str
         }
     """
@@ -141,18 +143,42 @@ def check_agent_compatibility_tool(agent_file_path: str) -> dict:
             "agent_type": "unknown",
             "has_generate_content": False,
             "has_runner": False,
+            "files_checked": [],
             "message": f"File not found: {agent_file_path}"
         }
     
     try:
+        # Track all files we've checked
+        files_checked = [str(agent_path)]
+        
+        # Read main agent file
         content = agent_path.read_text()
         
-        # Check for ADK agent patterns
-        has_adk_imports = 'from google.adk import' in content or 'import google.adk' in content
-        has_runner = 'InMemoryRunner' in content or 'runner.run_async' in content
+        # Extract and read local imports
+        import_contents = {}
+        local_imports = _extract_local_imports(content)
+        agent_dir = agent_path.parent
         
-        # Check for custom agent patterns
-        has_generate = 'def generate_content' in content
+        for import_info in local_imports:
+            import_path = _resolve_import_path(import_info, agent_dir)
+            if import_path and import_path.exists():
+                try:
+                    import_contents[str(import_path)] = import_path.read_text()
+                    files_checked.append(str(import_path))
+                except Exception:
+                    pass  # Skip files we can't read
+        
+        # Combine all content for checking
+        all_content = content + "\n".join(import_contents.values())
+        
+        # Check for ADK agent patterns (in main file or imports)
+        has_adk_imports = 'from google.adk import' in all_content or 'import google.adk' in all_content
+        has_runner = 'InMemoryRunner' in all_content or 'runner.run_async' in all_content
+        
+        # Check for custom agent patterns (in main file or imports)
+        has_generate = 'def generate_content' in all_content
+        
+        files_msg = f" (checked {len(files_checked)} file(s))" if len(files_checked) > 1 else ""
         
         if has_adk_imports and has_runner:
             return {
@@ -160,7 +186,8 @@ def check_agent_compatibility_tool(agent_file_path: str) -> dict:
                 "agent_type": "adk",
                 "has_generate_content": False,
                 "has_runner": True,
-                "message": "✓ Agent is compatible! Detected ADK agent with InMemoryRunner"
+                "files_checked": files_checked,
+                "message": f"✓ Agent is compatible! Detected ADK agent with InMemoryRunner{files_msg}"
             }
         elif has_generate:
             return {
@@ -168,7 +195,8 @@ def check_agent_compatibility_tool(agent_file_path: str) -> dict:
                 "agent_type": "custom",
                 "has_generate_content": True,
                 "has_runner": False,
-                "message": "✓ Agent is compatible! Detected custom agent with generate_content() method"
+                "files_checked": files_checked,
+                "message": f"✓ Agent is compatible! Detected custom agent with generate_content() method{files_msg}"
             }
         else:
             return {
@@ -176,7 +204,8 @@ def check_agent_compatibility_tool(agent_file_path: str) -> dict:
                 "agent_type": "unknown",
                 "has_generate_content": False,
                 "has_runner": False,
-                "message": "Agent needs either:\n- ADK setup (Agent + InMemoryRunner + runner.run_async), OR\n- Custom agent with generate_content(prompt: str) method"
+                "files_checked": files_checked,
+                "message": f"Agent needs either:\n- ADK setup (Agent + InMemoryRunner + runner.run_async), OR\n- Custom agent with generate_content(prompt: str) method\n\nChecked: {', '.join([Path(f).name for f in files_checked])}"
             }
     
     except Exception as e:
@@ -185,8 +214,80 @@ def check_agent_compatibility_tool(agent_file_path: str) -> dict:
             "agent_type": "unknown",
             "has_generate_content": False,
             "has_runner": False,
+            "files_checked": [],
             "message": f"Error reading file: {e}"
         }
+
+
+def _extract_local_imports(content: str) -> list:
+    """Extract local import statements from Python code."""
+    import re
+    local_imports = []
+    
+    # Pattern 1: from .module import ... or from ..module import ...
+    relative_imports = re.findall(r'from\s+(\.+[\w.]*)\s+import', content)
+    local_imports.extend(relative_imports)
+    
+    # Pattern 2: from module import ... (where module doesn't start with known external packages)
+    absolute_imports = re.findall(r'from\s+([\w.]+)\s+import', content)
+    for imp in absolute_imports:
+        # Filter out common external packages
+        if not imp.split('.')[0] in ['os', 'sys', 'pathlib', 'typing', 'datetime', 'json', 'yaml', 
+                                       're', 'asyncio', 'google', 'langchain', 'openai', 'anthropic',
+                                       'requests', 'http', 'urllib', 'logging', 'argparse', 'functools',
+                                       'itertools', 'collections', 'dataclasses', 'enum', 'abc']:
+            if '.' not in imp or len(imp.split('.')) <= 3:  # Likely local if short path
+                local_imports.append(imp)
+    
+    # Pattern 3: import module (where module is likely local)
+    simple_imports = re.findall(r'^import\s+([\w]+)', content, re.MULTILINE)
+    for imp in simple_imports:
+        if imp not in ['os', 'sys', 'pathlib', 'typing', 'datetime', 'json', 'yaml', 're', 'asyncio']:
+            local_imports.append(imp)
+    
+    return local_imports
+
+
+def _resolve_import_path(import_str: str, base_dir: Path) -> Optional[Path]:
+    """Resolve an import string to an actual file path."""
+    # Handle relative imports (., .., etc.)
+    if import_str.startswith('.'):
+        parts = import_str.lstrip('.').split('.')
+        # For relative imports, start from base_dir
+        current = base_dir
+        for part in parts:
+            if part:
+                current = current / part
+        
+        # Try as .py file first
+        if current.with_suffix('.py').exists():
+            return current.with_suffix('.py')
+        # Try as package (__init__.py)
+        if (current / '__init__.py').exists():
+            return current / '__init__.py'
+    else:
+        # Handle absolute imports (relative to base_dir)
+        parts = import_str.split('.')
+        
+        # Try as direct file
+        file_path = base_dir / f"{parts[0]}.py"
+        if file_path.exists():
+            return file_path
+        
+        # Try as package
+        package_path = base_dir / parts[0]
+        if package_path.is_dir():
+            if len(parts) > 1:
+                # Multi-level import: tools.calculator -> tools/calculator.py
+                submodule = package_path / f"{parts[1]}.py"
+                if submodule.exists():
+                    return submodule
+            # Try __init__.py
+            init_path = package_path / '__init__.py'
+            if init_path.exists():
+                return init_path
+    
+    return None
 
 
 def check_eval_config_exists_tool(agent_directory: str) -> dict:
