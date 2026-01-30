@@ -9,10 +9,8 @@ Interactive ADK-based agent that guides you through setting up agent evaluation 
 Clone this repo **outside** your agent project directory:
 
 ```bash
-# Clone in a separate location (e.g., ~/repos, ~/projects)
-cd ~/repos
-git clone https://github.com/AhmedYEita/agent-evaluation-assistant
-cd agent-evaluation-assistant
+git clone https://github.com/teamdatatonic/agents-in-sdlc-competition.git
+cd agents-in-sdlc-competition/agent-evaluation-assistant
 pip install -e ./sdk
 ```
 

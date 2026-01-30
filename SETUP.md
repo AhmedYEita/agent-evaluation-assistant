@@ -34,8 +34,14 @@ Before you begin, ensure you have:
 ## Clone Repository
 
 ```bash
-git clone https://github.com/AhmedYEita/agent-evaluation-assistant.git
-cd agent-evaluation-assistant
+# Option A: Clone inside your agent project
+cd /path/to/your-agent-project
+git clone https://github.com/teamdatatonic/agents-in-sdlc-competition.git
+cd agents-in-sdlc-competition/agent-evaluation-assistant
+
+# Option B: Clone separately
+git clone https://github.com/teamdatatonic/agents-in-sdlc-competition.git
+cd agents-in-sdlc-competition/agent-evaluation-assistant
 ```
 
 ## GCP Setup
