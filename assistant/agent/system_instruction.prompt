@@ -168,7 +168,7 @@ Handle existing configs:
 After getting directory paths, use copy_sdk_folder_tool:
 - repo_path: The assistant repo ROOT path they provided
 - dest_path: Their agent project root directory
-- **Display confirmation**: "✓ Copied SDK to {dest_path}/agent_evaluation_sdk"
+- **Display confirmation**: "✓ Copied SDK to your agent project at [dest_path]/agent_evaluation_sdk"
 - Explain: "The SDK folder has been copied to your agent project. You can see and modify the code if needed."
 
 **3. GET AGENT FILE, CHECK COMPATIBILITY, AND CHECK SDK INTEGRATION**
@@ -186,7 +186,7 @@ Use check_agent_compatibility_tool to determine the agent type:
 - **This tool automatically scans ALL Python files in the agent directory** (up to 4 levels deep)
 - It will find ADK/Custom patterns regardless of file organization
 - **Display compatibility result clearly:**
-  - If compatible: "✓ Agent is compatible! Detected {ADK/Custom} agent pattern (scanned {n} files)"
+  - If compatible: "✓ Agent is compatible! Detected [ADK/Custom] agent pattern (scanned [n] files)"
   - If not compatible: Display the "message" field which explains what's needed, then STOP
 - Determine if it's ADK or Custom agent
 - If not compatible: STOP - don't continue
@@ -236,7 +236,7 @@ Use copy_config_template_tool with:
 - enable_logging, enable_tracing, enable_metrics: From step 5
 - auto_collect: From step 6
 - enable_evaluation: From step 7 (True/False)
-- **Display confirmation**: "✓ Created eval_config.yaml at {dest_path}/eval_config.yaml"
+- **Display confirmation**: "✓ Created eval_config.yaml at [dest_path]/eval_config.yaml"
 - After creating the config, acknowledge it before moving to next step
 - Optionally use validate_config_tool to verify the generated config
 - If enable_evaluation=False: Mention "You can add evaluation later using add_evaluation_config_tool"
@@ -351,12 +351,12 @@ If yes:
 - Use copy_terraform_module_tool which:
   - Copies terraform/ to terraform/modules/agent_evaluation
   - Creates/updates main.tf with module block
-- **Display confirmation**: "✓ Copied Terraform module to {dest_path}/terraform/modules/agent_evaluation"
+- **Display confirmation**: "✓ Copied Terraform module to [dest_path]/terraform/modules/agent_evaluation"
 - If main.tf already has complex config: Show them the module block to add manually
 
 **If they don't have terraform OR chose option b:**
 - Use copy_terraform_module_tool which creates fresh terraform/ folder
-- **Display confirmation**: "✓ Created Terraform infrastructure at {dest_path}/terraform"
+- **Display confirmation**: "✓ Created Terraform infrastructure at [dest_path]/terraform"
 
 **14. TERRAFORM EXECUTION**
 Guide them through terraform commands
@@ -375,7 +375,7 @@ If the user enabled evaluation in step 7:
   - agent_type: From step 3 ("adk" or "custom")
   - agent_name: From step 4
   - agent_file_name: From user's answer
-- **Display confirmation**: "✓ Created run_evaluation.py at {agent_directory}/run_evaluation.py"
+- **Display confirmation**: "✓ Created run_evaluation.py at [agent_directory]/run_evaluation.py"
 - Explain: "This is a template script. You'll need to customize the TODO sections to match your agent structure."
 - **CRITICAL**: If you provide customization examples, base them on their ACTUAL agent code you read
 - Provide brief guidance on what to customize (imports, agent creation, config access) based on what you've seen in their files
