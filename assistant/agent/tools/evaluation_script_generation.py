@@ -176,6 +176,7 @@ async def main():
     for i, test_case in enumerate(test_cases, 1):
         instruction = test_case["instruction"]
         reference = test_case.get("reference", "")
+        reference_trajectory = test_case.get("reference_trajectory")
         
         print(f"   [{{i}}/{{len(test_cases)}}] Testing...")
         
@@ -213,6 +214,11 @@ async def main():
             if not response_text or response_text.strip() == "":
                 response_text = "[EMPTY RESPONSE]"
             
+            # Get trajectory from wrapper
+            trajectory = None
+            if wrapper and hasattr(wrapper, 'get_last_trajectory'):
+                trajectory = wrapper.get_last_trajectory()
+            
             results.append({{
                 "test_run_id": str(uuid.uuid4()),  # Unique ID for this test case
                 "test_timestamp": test_timestamp,
@@ -220,6 +226,8 @@ async def main():
                 "reference": reference,
                 "response": response_text,
                 "context": test_case.get("context"),
+                "reference_trajectory": reference_trajectory,
+                "trajectory": trajectory,
                 "error": None,
             }})
         except Exception as e:
@@ -231,6 +239,8 @@ async def main():
                 "reference": reference,
                 "response": f"ERROR: {{str(e)}}",
                 "context": test_case.get("context"),
+                "reference_trajectory": reference_trajectory,
+                "trajectory": None,
                 "error": str(e),
             }})
     
