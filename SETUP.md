@@ -38,12 +38,12 @@ Clone anywhere - works **inside or outside** your agent project:
 ```bash
 # Option A: Clone inside your agent project
 cd /path/to/your-agent-project
-git clone https://github.com/AhmedYEita/agent-evaluation-assistant
-cd agent-evaluation-assistant
+git clone https://github.com/teamdatatonic/agents-in-sdlc-competition.git
+cd agents-in-sdlc-competition/agent-evaluation-assistant
 
 # Option B: Clone separately
-git clone https://github.com/AhmedYEita/agent-evaluation-assistant.git
-cd agent-evaluation-assistant
+git clone https://github.com/teamdatatonic/agents-in-sdlc-competition.git
+cd agents-in-sdlc-competition/agent-evaluation-assistant
 ```
 
 ## GCP Setup

@@ -24,8 +24,8 @@ A Python SDK and Terraform infrastructure for comprehensive agent evaluation wit
 Clone anywhere - **inside or outside** your agent project:
 
 ```bash
-git clone https://github.com/AhmedYEita/agent-evaluation-assistant
-cd agent-evaluation-assistant
+git clone https://github.com/teamdatatonic/agents-in-sdlc-competition.git
+cd agents-in-sdlc-competition/agent-evaluation-assistant
 pip install -e ./sdk
 ```
 

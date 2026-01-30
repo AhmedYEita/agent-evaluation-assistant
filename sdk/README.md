@@ -104,7 +104,7 @@ The wrapper provides universal compatibility across agent types.
 
 ## Documentation
 
-See the [main repository](https://github.com/AhmedYEita/agent-evaluation-assistant) for:
+See the [main repository](https://github.com/teamdatatonic/agents-in-sdlc-competition/tree/main/agent-evaluation-assistant) for:
 - Complete setup guide
 - Infrastructure deployment
 - Evaluation workflow
