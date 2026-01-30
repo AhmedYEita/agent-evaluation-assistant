@@ -2,6 +2,8 @@
 
 **Production-ready evaluation infrastructure for AI agents with one-line integration.**
 
+### 📺 [Demo Video](https://drive.google.com/file/d/1amiF0u10Eq0N9CPx_dhmjUUBXOIwgVLK/view?usp=sharing)
+
 ## Overview
 
 A Python SDK and Terraform infrastructure for comprehensive agent evaluation with minimal code changes. Get structured logging, performance tracing, metrics dashboards, dataset collection, and quality testing by adding a single line of code.
