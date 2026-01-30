@@ -175,17 +175,23 @@ class RegressionTester:
 
         print("💾 Saving responses...")
 
-        # Add timestamp to each row
+        # Add timestamp to each row and serialize JSON fields
+        import json
         timestamp = datetime.utcnow().isoformat()
-        rows = [
-            {
+        rows = []
+        for result in results:
+            row = {
                 **result,
                 "test_run_name": test_run_name,
                 "agent_name": self.agent_name,
                 "test_timestamp": timestamp,
             }
-            for result in results
-        ]
+            # Serialize JSON fields to strings for insert_rows_json
+            if row.get("reference_trajectory") is not None:
+                row["reference_trajectory"] = json.dumps(row["reference_trajectory"])
+            if row.get("trajectory") is not None:
+                row["trajectory"] = json.dumps(row["trajectory"])
+            rows.append(row)
 
         schema = [
             bigquery.SchemaField("test_run_id", "STRING", mode="REQUIRED"),
@@ -271,9 +277,9 @@ class RegressionTester:
             print(f"   ✓ Table ready: {metrics_table}")
         except Conflict:
             # Table already exists, which is fine
-            pass
+            print(f"   ✓ Table ready: {metrics_table}")
         except Exception as e:
-            print(f"❌ Error creating table: {e}")
+            print(f"❌ Error creating metrics table: {e}")
             raise
 
         try:
