@@ -184,6 +184,11 @@ class EvaluationWrapper:
         @functools.wraps(original_method)
         async def wrapped(*args, **kwargs):
             interaction_id = str(uuid.uuid4())
+
+            # Initialize trajectory tracking for this interaction
+            if self.config.logging.include_trajectories:
+                self._tool_traces.traces = []
+
             input_data = (
                 args[0]
                 if args
@@ -208,6 +213,14 @@ class EvaluationWrapper:
                 output_data = self._extract_output(response)
                 metadata = self._extract_metadata(response)
 
+                # Get trajectory if tracking is enabled
+                trajectory = None
+                if self.config.logging.include_trajectories and hasattr(
+                    self._tool_traces, "traces"
+                ):
+                    trajectory = self._tool_traces.traces if self._tool_traces.traces else None
+                    self._last_trajectory = trajectory.copy() if trajectory else None
+
                 if not self._shutdown_called:
                     self._submit_observability(
                         trace_id,
@@ -218,6 +231,7 @@ class EvaluationWrapper:
                         duration_ms,
                         metadata,
                         start,
+                        trajectory=trajectory,
                     )
 
                 return response
@@ -247,6 +261,11 @@ class EvaluationWrapper:
         @functools.wraps(original_method)
         def wrapped(*args, **kwargs):
             interaction_id = str(uuid.uuid4())
+
+            # Initialize trajectory tracking for this interaction
+            if self.config.logging.include_trajectories:
+                self._tool_traces.traces = []
+
             input_data = (
                 args[0]
                 if args
@@ -267,6 +286,14 @@ class EvaluationWrapper:
                 output_data = self._extract_output(response)
                 metadata = self._extract_metadata(response)
 
+                # Get trajectory if tracking is enabled
+                trajectory = None
+                if self.config.logging.include_trajectories and hasattr(
+                    self._tool_traces, "traces"
+                ):
+                    trajectory = self._tool_traces.traces if self._tool_traces.traces else None
+                    self._last_trajectory = trajectory.copy() if trajectory else None
+
                 if not self._shutdown_called:
                     self._submit_observability(
                         trace_id,
@@ -277,6 +304,7 @@ class EvaluationWrapper:
                         duration_ms,
                         metadata,
                         start,
+                        trajectory=trajectory,
                     )
 
                 return response
