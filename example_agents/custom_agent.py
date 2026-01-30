@@ -7,7 +7,6 @@ Replace MyAgent with your actual agent class - it just needs a generate_content(
 import argparse
 import time
 import yaml
-from pathlib import Path
 from google import genai
 from google.genai import types
 from agent_evaluation_sdk import enable_evaluation
@@ -31,13 +30,15 @@ TEST_QUERIES = [
 # Example: Your agent class (replace with your actual agent implementation)
 class MyAgent:
     """Simple agent wrapper - replace with your actual agent implementation."""
-    
+
     def __init__(self, model, client, tools, tool_functions):
         self.model = model
         self.client = client
         self.tools = tools
         self.tool_functions = tool_functions
-        self.system_instruction = "You are a helpful assistant. Provide concise, clear answers."
+        self.system_instruction = (
+            "You are a helpful assistant. Provide concise, clear answers."
+        )
 
     def generate_content(self, prompt):
         """Required method: SDK wraps this to add observability."""
@@ -88,12 +89,10 @@ def create_agent():
     """Create agent with evaluation - minimal integration."""
     # Load configuration
     config = load_agent_config()
-    
+
     # 1. Create your agent (as you normally would)
     client = genai.Client(
-        vertexai=True, 
-        project=config["project_id"], 
-        location=config["location"]
+        vertexai=True, project=config["project_id"], location=config["location"]
     )
 
     # Define tools
@@ -130,18 +129,12 @@ def create_agent():
     ]
 
     agent = MyAgent(
-        model=config["model"], 
-        client=client, 
-        tools=tools, 
-        tool_functions={}
+        model=config["model"], client=client, tools=tools, tool_functions={}
     )
 
     # 2. Enable evaluation (ONE LINE!)
     wrapper = enable_evaluation(
-        agent, 
-        config["project_id"], 
-        "custom_agent", 
-        "eval_config.yaml"
+        agent, config["project_id"], "custom_agent", "eval_config.yaml"
     )
 
     # 3. Define tools with tracing decorator
@@ -244,7 +237,7 @@ def run_test_queries():
 def run_interactive():
     """Run agent in interactive mode."""
     agent, wrapper = create_agent()
-    
+
     print("Agent is ready! Type 'quit' to exit.\n")
 
     while True:
@@ -278,9 +271,9 @@ def main():
         action="store_true",
         help="Run test queries instead of interactive mode",
     )
-    
+
     args = parser.parse_args()
-    
+
     if args.test:
         run_test_queries()
     else:
@@ -289,4 +282,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

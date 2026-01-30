@@ -68,13 +68,16 @@ regression:
 ## Features
 
 - **Auto Logging**: All interactions → Cloud Logging
-- **Performance Tracing**: Request flow → Cloud Trace
+- **Performance Tracing**: Request flow → Cloud Trace  
 - **Metrics**: Latency, errors, tokens → Cloud Monitoring
 - **Dataset Collection**: Interactions → BigQuery (opt-in)
+- **Trajectory Capture**: Tool calls with timing → BigQuery (when enabled)
 - **Tool Tracing**: Decorate functions with `@wrapper.tool_trace("name")`
 - **Zero Latency**: All Cloud API calls in background threads
 
 ## Tool Tracing (Optional)
+
+Trace individual tool calls and capture trajectory data:
 
 ```python
 wrapper = enable_evaluation(agent, project_id, agent_name, config)
@@ -86,7 +89,10 @@ def search_tool(query: str) -> str:
 agent.add_tools([search_tool])
 ```
 
-Tool spans appear in Cloud Trace as `tool.{name}`.
+**What's captured:**
+- Tool spans in Cloud Trace as `tool.{name}`
+- Trajectory data in BigQuery (when `include_trajectories: true`)
+  - Tool name, duration, errors, sequence
 
 ## Supported Agents
 

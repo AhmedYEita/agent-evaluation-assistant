@@ -24,7 +24,7 @@ def main():
     # Load configuration
     with open("agent_config.yaml") as f:
         agent_config = yaml.safe_load(f)
-    
+
     with open("eval_config.yaml") as f:
         eval_config = yaml.safe_load(f)
 
@@ -32,13 +32,12 @@ def main():
     agent, wrapper = create_agent()
 
     print(f"   Project: {agent_config['project_id']}")
-    print(f"   Agent: custom_agent")
+    print("   Agent: custom_agent")
     print()
 
     # Run evaluation test
     tester = RegressionTester(
-        project_id=agent_config['project_id'],
-        agent_name="custom_agent"
+        project_id=agent_config["project_id"], agent_name="custom_agent"
     )
 
     test_run_timestamp = datetime.now().strftime("%Y%m%d_%H%M")
@@ -49,11 +48,11 @@ def main():
     results = tester.run_full_test(
         agent=agent,
         test_run_name=f"test_{test_run_timestamp}",
-        only_reviewed=eval_config.get('regression', {}).get('only_reviewed', True),
-        limit=eval_config.get('regression', {}).get('test_limit'),
-        metrics=eval_config.get('genai_eval', {}).get('metrics', ['bleu', 'rouge']),
-        criteria=eval_config.get('genai_eval', {}).get('criteria', []),
-        thresholds=eval_config.get('genai_eval', {}).get('thresholds', {}),
+        only_reviewed=eval_config.get("regression", {}).get("only_reviewed", True),
+        limit=eval_config.get("regression", {}).get("test_limit"),
+        metrics=eval_config.get("genai_eval", {}).get("metrics", ["bleu", "rouge"]),
+        criteria=eval_config.get("genai_eval", {}).get("criteria", []),
+        thresholds=eval_config.get("genai_eval", {}).get("thresholds", {}),
     )
 
     if "error" not in results:
@@ -71,11 +70,10 @@ def main():
     else:
         print(f"\n❌ Error: {results['error']}")
         sys.exit(1)
-    
+
     # Cleanup
     wrapper.shutdown()
 
 
 if __name__ == "__main__":
     main()
-

@@ -71,7 +71,7 @@ class RegressionTester:
 
         # Use parameterized query to prevent SQL injection
         query = """
-            SELECT instruction, reference, context
+            SELECT instruction, reference, context, trajectory as reference_trajectory
             FROM `{table_name}`
             {where_clause}
             ORDER BY timestamp DESC
@@ -98,19 +98,23 @@ class RegressionTester:
         """Run agent on test cases and collect responses.
 
         Args:
-            agent: ADK agent instance
+            agent: Agent instance (wrapped with enable_evaluation)
             test_cases: List of test cases to run
 
         Returns:
-            List of results with responses
+            List of results with responses and trajectories
         """
         print(f"🤖 Running agent on {len(test_cases)} test cases...")
         results = []
+
+        # Check if agent has wrapper for trajectory access
+        wrapper = getattr(agent, "_evaluation_wrapper", None)
 
         for i, test_case in enumerate(test_cases, 1):
             instruction = test_case.get("instruction", "")
             reference = test_case.get("reference", "")
             context = test_case.get("context")
+            reference_trajectory = test_case.get("reference_trajectory")
 
             print(f"   [{i}/{len(test_cases)}] Testing...")
 
@@ -124,10 +128,16 @@ class RegressionTester:
                     response_text = "[EMPTY RESPONSE]"
                     error = "Agent returned empty response"
 
+                # Get trajectory from wrapper if available
+                trajectory = None
+                if wrapper and hasattr(wrapper, "get_last_trajectory"):
+                    trajectory = wrapper.get_last_trajectory()
+
             except Exception as e:
                 print(f"   ❌ Error: {e}")
                 response_text = f"ERROR: {str(e)}"
                 error = str(e)
+                trajectory = None
 
             results.append(
                 {
@@ -135,6 +145,8 @@ class RegressionTester:
                     "reference": reference,
                     "response": response_text,
                     "context": context,
+                    "reference_trajectory": reference_trajectory,
+                    "trajectory": trajectory,
                     "test_run_id": str(uuid.uuid4()),
                     "test_timestamp": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
                     "error": error,
@@ -163,17 +175,23 @@ class RegressionTester:
 
         print("💾 Saving responses...")
 
-        # Add timestamp to each row
+        # Add timestamp to each row and serialize JSON fields
+        import json
         timestamp = datetime.utcnow().isoformat()
-        rows = [
-            {
+        rows = []
+        for result in results:
+            row = {
                 **result,
                 "test_run_name": test_run_name,
                 "agent_name": self.agent_name,
                 "test_timestamp": timestamp,
             }
-            for result in results
-        ]
+            # Serialize JSON fields to strings for insert_rows_json
+            if row.get("reference_trajectory") is not None:
+                row["reference_trajectory"] = json.dumps(row["reference_trajectory"])
+            if row.get("trajectory") is not None:
+                row["trajectory"] = json.dumps(row["trajectory"])
+            rows.append(row)
 
         schema = [
             bigquery.SchemaField("test_run_id", "STRING", mode="REQUIRED"),
@@ -184,6 +202,8 @@ class RegressionTester:
             bigquery.SchemaField("reference", "STRING", mode="REQUIRED"),
             bigquery.SchemaField("response", "STRING", mode="REQUIRED"),
             bigquery.SchemaField("context", "STRING", mode="NULLABLE"),
+            bigquery.SchemaField("reference_trajectory", "JSON", mode="NULLABLE"),
+            bigquery.SchemaField("trajectory", "JSON", mode="NULLABLE"),
             bigquery.SchemaField("error", "STRING", mode="NULLABLE"),
         ]
 
@@ -236,6 +256,7 @@ class RegressionTester:
             "dataset_size": eval_results.get("dataset_size", 0),
             "metrics": json.dumps(eval_results.get("metrics", {})),
             "criteria_scores": json.dumps(eval_results.get("criteria_scores", {})),
+            "trajectory_stats": json.dumps(eval_results.get("trajectory_stats", {})),
         }
 
         schema = [
@@ -245,6 +266,7 @@ class RegressionTester:
             bigquery.SchemaField("dataset_size", "INTEGER", mode="NULLABLE"),
             bigquery.SchemaField("metrics", "STRING", mode="NULLABLE"),
             bigquery.SchemaField("criteria_scores", "STRING", mode="NULLABLE"),
+            bigquery.SchemaField("trajectory_stats", "STRING", mode="NULLABLE"),
         ]
 
         # Create table if it doesn't exist
@@ -255,9 +277,9 @@ class RegressionTester:
             print(f"   ✓ Table ready: {metrics_table}")
         except Conflict:
             # Table already exists, which is fine
-            pass
+            print(f"   ✓ Table ready: {metrics_table}")
         except Exception as e:
-            print(f"❌ Error creating table: {e}")
+            print(f"❌ Error creating metrics table: {e}")
             raise
 
         try:
@@ -384,6 +406,17 @@ class RegressionTester:
                 if "pass_rate" in scores:
                     score_info += f", pass_rate={scores['pass_rate']}"
                 print(f"  {criterion}: {score_info}")
+
+        if "trajectory_stats" in eval_results and eval_results["trajectory_stats"].get("available"):
+            traj = eval_results["trajectory_stats"]
+            print("\nTrajectory Analysis:")
+            print(f"  Interactions with tools: {traj.get('interactions_with_tools', 0)}")
+            print(f"  Total tool calls: {traj.get('total_tool_calls', 0)}")
+            print(f"  Avg tools per interaction: {traj.get('avg_tools_per_interaction', 0)}")
+            if traj.get("tool_usage_counts"):
+                print(f"  Tool usage: {traj['tool_usage_counts']}")
+            if traj.get("interactions_with_errors", 0) > 0:
+                print(f"  ⚠️  Errors: {traj['interactions_with_errors']}")
 
         print("\n💡 Query your results:")
         print(f"   SELECT * FROM `{response_table}` WHERE test_run_name = '{test_run_name}'")

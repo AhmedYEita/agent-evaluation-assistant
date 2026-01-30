@@ -12,17 +12,17 @@ def generate_evaluation_script_tool(
     agent_directory: str,
     agent_type: str,
     agent_name: str,
-    agent_file_name: Optional[str] = None
+    agent_file_name: Optional[str] = None,
 ) -> dict:
     """
     Generate run_evaluation.py script template based on agent type
-    
+
     Args:
         agent_directory: Path to agent project directory
         agent_type: "adk" or "custom"
         agent_name: Name of the agent
         agent_file_name: Optional agent file name (e.g., "my_agent.py")
-    
+
     Returns:
         {
             "success": bool,
@@ -33,42 +33,44 @@ def generate_evaluation_script_tool(
     try:
         dest_dir = Path(agent_directory).expanduser()
         script_path = dest_dir / "run_evaluation.py"
-        
+
         if script_path.exists():
             return {
                 "success": False,
                 "script_path": str(script_path),
-                "message": "run_evaluation.py already exists. Please rename or delete it first."
+                "message": "run_evaluation.py already exists. Please rename or delete it first.",
             }
-        
+
         if agent_type == "adk":
             script_content = _generate_adk_script(agent_name, agent_file_name)
         else:  # custom agent
             script_content = _generate_custom_script(agent_name, agent_file_name)
-        
+
         # Write script
         dest_dir.mkdir(parents=True, exist_ok=True)
-        with open(script_path, 'w') as f:
+        with open(script_path, "w") as f:
             f.write(script_content)
-        
+
         return {
             "success": True,
             "script_path": str(script_path),
-            "message": f"✓ Created run_evaluation.py template for {agent_type} agent. Please customize the TODO sections."
+            "message": f"✓ Created run_evaluation.py template for {agent_type} agent. Please customize the TODO sections.",
         }
-    
+
     except Exception as e:
         return {
             "success": False,
             "script_path": None,
-            "message": f"Error generating evaluation script: {e}"
+            "message": f"Error generating evaluation script: {e}",
         }
 
 
 def _generate_adk_script(agent_name: str, agent_file_name: Optional[str]) -> str:
     """Generate ADK agent evaluation script template."""
-    module_name = agent_file_name.replace('.py', '') if agent_file_name else 'YOUR_AGENT_MODULE'
-    
+    module_name = (
+        agent_file_name.replace(".py", "") if agent_file_name else "YOUR_AGENT_MODULE"
+    )
+
     return f'''"""
 Evaluation Testing Script for ADK Agent
 
@@ -174,6 +176,7 @@ async def main():
     for i, test_case in enumerate(test_cases, 1):
         instruction = test_case["instruction"]
         reference = test_case.get("reference", "")
+        reference_trajectory = test_case.get("reference_trajectory")
         
         print(f"   [{{i}}/{{len(test_cases)}}] Testing...")
         
@@ -211,6 +214,11 @@ async def main():
             if not response_text or response_text.strip() == "":
                 response_text = "[EMPTY RESPONSE]"
             
+            # Get trajectory from wrapper
+            trajectory = None
+            if wrapper and hasattr(wrapper, 'get_last_trajectory'):
+                trajectory = wrapper.get_last_trajectory()
+            
             results.append({{
                 "test_run_id": str(uuid.uuid4()),  # Unique ID for this test case
                 "test_timestamp": test_timestamp,
@@ -218,6 +226,8 @@ async def main():
                 "reference": reference,
                 "response": response_text,
                 "context": test_case.get("context"),
+                "reference_trajectory": reference_trajectory,
+                "trajectory": trajectory,
                 "error": None,
             }})
         except Exception as e:
@@ -229,6 +239,8 @@ async def main():
                 "reference": reference,
                 "response": f"ERROR: {{str(e)}}",
                 "context": test_case.get("context"),
+                "reference_trajectory": reference_trajectory,
+                "trajectory": None,
                 "error": str(e),
             }})
     
@@ -272,8 +284,10 @@ if __name__ == "__main__":
 
 def _generate_custom_script(agent_name: str, agent_file_name: Optional[str]) -> str:
     """Generate custom agent evaluation script template."""
-    module_name = agent_file_name.replace('.py', '') if agent_file_name else 'YOUR_AGENT_MODULE'
-    
+    module_name = (
+        agent_file_name.replace(".py", "") if agent_file_name else "YOUR_AGENT_MODULE"
+    )
+
     return f'''"""
 Evaluation Testing Script
 
@@ -413,4 +427,3 @@ def main():
 if __name__ == "__main__":
     main()
 '''
-
